@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.grave.mapper.CanvasMapper">
+
+     <!-- 插入 CanvasDTO -->
+    <insert id="saveCanvas" parameterType="com.example.grave.pojo.dto.CanvasDTO">
+        INSERT INTO CanvasDTO
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != 0">id,</if>
+            uId,
+        </trim>
+        <trim prefix="VALUES (" suffix=");" suffixOverrides=",">
+            <if test="id != 0">#{id},</if>
+            #{userId},
+        </trim>
+        
+        
+        <!-- 插入 CanvasDTO 中的 TestBox 列表 -->
+        <foreach collection="texts" item="text" separator=";">
+            INSERT INTO TextBox (pid, content, left_location, top_location, width_location, height_location)
+            VALUES (#{pid}, #{text.content}, #{text.left}, #{text.top}, #{text.width}, #{text.height});
+        </foreach>
+
+        <!-- 插入 CanvasDTO 中的 ImageBox 列表 -->
+        <foreach collection="images" item="image" separator=";">
+            INSERT INTO ImageBox (pid, imageUrl, left_location, top_location, width_location, height_location)
+            VALUES (#{pid}, #{image.imageUrl}, #{image.left}, #{image.top}, #{image.width}, #{image.height});
+        </foreach>
+    </insert>
+</mapper>
