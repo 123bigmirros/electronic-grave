@@ -58,7 +58,7 @@
         },
         mounted() {
             // 在这里模拟或者从后端获取数据
-            this.fetchCanvasItems();
+            this.getCanvas();
         },
         methods: {
             // 模拟从后端获取画布数据
@@ -68,41 +68,17 @@
                     .then(response => {
                         // 假设返回的数据格式是这样的：
                         // response.data = { texts: [], images: [] }
-                        const canvasData = response.data;
+                        const canvasData = response.data["data"];
 
-                        // 将获取到的画布数据赋值给组件中的 canvasItems
-                        this.canvasItems.texts = canvasData.texts || [];
-                        this.canvasItems.images = canvasData.images || [];
 
+                        this.canvasItems = canvasData || []
                         // 你可以在这里进行其他的处理，例如初始化轮播图的页数等
-                        alert('画布数据加载成功!');
+                        alert(JSON.stringify(canvasData, null, 2));
                     })
                     .catch(error => {
                         console.error('获取画布数据失败:', error);
                         alert('加载画布数据失败!');
                     });
-            },
-            fetchCanvasItems() {
-                this.canvasItems = [
-                    {
-                        texts: [
-                            { content: '第一页文本框', position: { left: 50, top: 50, width: 200, height: 40 } },
-                            { content: '更多文本内容', position: { left: 50, top: 120, width: 250, height: 40 } },
-                        ],
-                        images: [
-                            { imageUrl: 'https://via.placeholder.com/150', position: { left: 100, top: 200, width: 150, height: 150 } },
-                            { imageUrl: 'https://via.placeholder.com/150', position: { left: 300, top: 200, width: 150, height: 150 } },
-                        ],
-                    },
-                    {
-                        texts: [
-                            { content: '第二页文本框', position: { left: 50, top: 50, width: 200, height: 40 } },
-                        ],
-                        images: [
-                            { imageUrl: 'https://via.placeholder.com/150', position: { left: 100, top: 200, width: 150, height: 150 } },
-                        ],
-                    },
-                ];
             },
             // 显示上一页
             prevSlide() {

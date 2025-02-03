@@ -73,6 +73,7 @@
                 if (this.dragging) {
                     this.position.left = event.clientX - this.offsetX;
                     this.position.top = event.clientY - this.offsetY;
+                    this.$emit('updatePosition', this.position);
                 }
             },
             // 停止拖拽

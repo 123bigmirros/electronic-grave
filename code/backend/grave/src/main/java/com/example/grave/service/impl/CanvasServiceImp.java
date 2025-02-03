@@ -1,5 +1,6 @@
 package com.example.grave.service.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,8 @@ public class CanvasServiceImp implements CanvasService {
     
     public void saveCanvas(CanvasDTO canvasDTO) {
         canvasMapper.saveCanvas(canvasDTO);
+        canvasMapper.insertImageBoxes(canvasDTO);
+        canvasMapper.insertTextBoxes(canvasDTO);
     }
 
 
@@ -27,6 +30,20 @@ public class CanvasServiceImp implements CanvasService {
         canvasVO.setImages(canvasMapper.getImages(id));;
         canvasVO.setTexts(canvasMapper.getTexts(id));
         return canvasVO;
+    }
+
+
+    @Override
+    public List<CanvasVO> loadCanvas() {
+        List<CanvasDTO> canvasDTOs = canvasMapper.loadCanvas();
+        List<CanvasVO> canvasVOs = new ArrayList<CanvasVO>();
+        for (CanvasDTO canvasDTO : canvasDTOs) {
+            CanvasVO canvasVO = new CanvasVO();
+            canvasVO.setImages(canvasMapper.getImages(canvasDTO.getId()));
+            canvasVO.setTexts(canvasMapper.getTexts(canvasDTO.getId()));
+            canvasVOs.add(canvasVO);
+        }
+        return canvasVOs;
     }
     
 }

@@ -1,6 +1,7 @@
 package com.example.grave.controller.user;
 
 import java.util.List;
+import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -29,9 +30,11 @@ public class CanvasController {
     private CanvasService canvasService;
     @PostMapping("/save")
     public Result submit(@RequestBody CanvasDTO canvasDTO){
+        canvasDTO.setId((new Random()).nextLong(10000));
         canvasDTO.setUserId((long) 1);
         for(ImageBox imageBox:canvasDTO.getImages()){
             imageBox.setPid(canvasDTO.getId());
+            System.out.println(imageBox.getLeft());
         }
         for(TextBox textBox:canvasDTO.getTexts()){
             textBox.setPid(canvasDTO.getId());

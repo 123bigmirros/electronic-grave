@@ -29,12 +29,14 @@
                         :key="index"
                         :initialContent="item.content"
                         :initialPosition="item.position"
+                        @updatePosition="updateTextPosition(index, $event)"
                         />
                 <ImgTool
                         v-for="(item, index) in canvasItems.images"
                         :key="'img-' + index"
                         :initialImageUrl="item.imageUrl"
                         :initialPosition="item.position"
+                        @updatePosition="updateImagePosition(index, $event)"
                         />
             </div>
         </div>
@@ -84,6 +86,12 @@
                     }
                 };
                 this.canvasItems.images.push(newImage);
+            },
+            updateTextPosition(index, newPosition) {
+                this.canvasItems.texts[index].position = newPosition;
+            },
+            updateImagePosition(index, newPosition) {
+                this.canvasItems.images[index].position = newPosition;
             },
             saveCanvas() {
                 const canvasData = {

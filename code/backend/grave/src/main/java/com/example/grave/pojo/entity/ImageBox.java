@@ -12,4 +12,10 @@ public class ImageBox{
     private int top;
     private int width;
     private int height;
+    public void setPosition(Position position) {
+        this.left = position.getLeft();
+        this.top = position.getTop();
+        this.width = position.getWidth();
+        this.height = position.getHeight();
+    }
 }
