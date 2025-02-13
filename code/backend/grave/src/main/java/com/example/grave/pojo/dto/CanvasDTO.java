@@ -2,6 +2,7 @@ package com.example.grave.pojo.dto;
 
 import java.util.List;
 
+import com.example.grave.pojo.entity.Heritage;
 import com.example.grave.pojo.entity.ImageBox;
 import com.example.grave.pojo.entity.TextBox;
 
@@ -13,4 +14,5 @@ public class CanvasDTO {
     private long userId;
     private List<ImageBox> images;
     private List<TextBox> texts;
+    private List<Heritage> heritages;
 }

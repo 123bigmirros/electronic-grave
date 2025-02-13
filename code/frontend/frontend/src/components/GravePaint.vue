@@ -1,4 +1,3 @@
-
 <template>
     <div id="app">
         <div class="container">
@@ -11,6 +10,9 @@
                 </div>
                 <div class="tool" @click="addImgTool">
                     <p>图片框</p>
+                </div>
+                <div class="tool" @click="addHeritageTool">
+                    <p>遗产信息</p>
                 </div>
                 <div class="tool" @click="saveCanvas">
                     <p>保存画布</p>
@@ -38,6 +40,14 @@
                         :initialPosition="item.position"
                         @updatePosition="updateImagePosition(index, $event)"
                         />
+                <HeritageTool
+                    v-for="(item, index) in canvasItems.heritages"
+                    :key="'heritage-' + index"
+                    :initialPosition="item.position"
+                    @updatePosition="updateHeritagePosition(index, $event)"
+                    @configureHeritage="configureHeritage(index, $event)"
+                    @updateContent="updateHeritageContent(index, $event)"
+                />
             </div>
         </div>
     </div>
@@ -46,18 +56,21 @@
 <script>
     import TextTool from './TextTool.vue';
     import ImgTool from './ImgTool.vue';
-    import axios from 'axios';
+    import HeritageTool from './HeritageTool.vue';
+    import request from '../utils/request';
     export default {
         name: 'GravePaint',
         components: {
             TextTool,
-            ImgTool
+            ImgTool,
+            HeritageTool
         },
         data() {
             return {
                 canvasItems:{ 
                     texts:[],
-                    images:[]
+                    images: [],
+                    heritages: []
                 }// 用于存储添加到画布的元素
             };
         },
@@ -87,21 +100,44 @@
                 };
                 this.canvasItems.images.push(newImage);
             },
+            addHeritageTool() {
+                const newHeritage = {
+                    position: {
+                        left: 100,
+                        top: 100,
+                        width: 300,
+                        height: 200
+                    },
+                    publicTime: null,
+                    items: []
+                };
+                this.canvasItems.heritages.push(newHeritage);
+            },
             updateTextPosition(index, newPosition) {
                 this.canvasItems.texts[index].position = newPosition;
             },
             updateImagePosition(index, newPosition) {
                 this.canvasItems.images[index].position = newPosition;
             },
+            updateHeritagePosition(index, newPosition) {
+                this.canvasItems.heritages[index].position = newPosition;
+            },
+            configureHeritage(index, config) {
+                this.canvasItems.heritages[index].publicTime = config.publicTime;
+            },
+            updateHeritageContent(index, content) {
+                this.canvasItems.heritages[index].publicTime = content.publicTime;
+                this.canvasItems.heritages[index].items = content.items;
+            },
             saveCanvas() {
                 const canvasData = {
                     texts: this.canvasItems.texts,
-                    images: this.canvasItems.images
+                    images: this.canvasItems.images,
+                    heritages: this.canvasItems.heritages
                 };
 
-                // 发送 POST 请求到后端 API
-                axios.post('http://localhost:8090/user/canvas/save', canvasData)
-                    .then(()=> {
+                request.post('/user/canvas/save', canvasData)
+                    .then(() => {
                         alert('画布保存成功!');
                     })
                     .catch(error => {

@@ -3,12 +3,9 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.grave.mapper.CanvasMapper">
 
-   <insert id="saveCanvas" parameterType="com.example.grave.pojo.dto.CanvasDTO">
-    INSERT INTO CanvasDTO (id, uId)
-    <trim prefix="VALUES (" suffix=");" suffixOverrides=",">
-        <if test="id != 0">#{id},</if>
-        #{userId},
-    </trim>
+   <insert id="saveCanvas" parameterType="com.example.grave.pojo.dto.CanvasDTO" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO CanvasDTO ( uId)
+    VALUES (#{userId});
 </insert>
 
 <insert id="insertTextBoxes" parameterType="com.example.grave.pojo.dto.CanvasDTO">
@@ -24,4 +21,39 @@
         VALUES (#{id}, #{image.imageUrl}, #{image.left}, #{image.top}, #{image.width}, #{image.height});
     </foreach>
 </insert>
+
+<insert id="insertHeritages" parameterType="com.example.grave.pojo.entity.Heritage" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO heritage (
+        pid, 
+        public_time, 
+        left_location, 
+        top_location, 
+        width_location, 
+        height_location
+    )
+    VALUES (
+        #{pid},
+        #{publicTime},
+        #{position.left},
+        #{position.top},
+        #{position.width},
+        #{position.height}
+    )
+</insert>
+
+<insert id="insertHeritageItems" parameterType="com.example.grave.pojo.entity.Heritage">
+    <foreach collection="items" item="item" separator=";">
+        INSERT INTO heritage_item (
+            heritage_id,
+            content,
+            is_private
+        )
+        VALUES (
+            #{id},
+            #{item.content},
+            #{item.isPrivate}
+        )
+    </foreach>
+</insert>
+
 </mapper>
