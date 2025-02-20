@@ -56,4 +56,10 @@
     </foreach>
 </insert>
 
+<insert id="insertMarkdowns" parameterType="com.example.grave.pojo.dto.CanvasDTO">
+    <foreach collection="markdowns" item="markdown">
+        INSERT INTO markdown (pid, content, left_location, top_location, width_location, height_location)
+        VALUES (#{id}, #{markdown.content}, #{markdown.left}, #{markdown.top}, #{markdown.width}, #{markdown.height});
+    </foreach>
+</insert>
 </mapper>

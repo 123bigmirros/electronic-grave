@@ -24,6 +24,7 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
         if(token == null){token = "-1";}
         //2、校验令牌
         try {
+            System.out.println("wocao");
             Long userId = Long.parseLong(token);
             BaseContext.setCurrentId(userId);
             //3、通过，放行

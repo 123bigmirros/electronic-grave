@@ -39,6 +39,15 @@
                         :key="'heritage-' + heritageIndex"
                         :initialPosition="heritage.position"
                     />
+
+                    <!-- 添加 MarkdownTool -->
+                    <MarkdownTool
+                        v-for="(markdown, markdownIndex) in item.markdowns"
+                        :key="'md-' + markdownIndex"
+                        :initialContent="markdown.content"
+                        :initialPosition="markdown.position"
+                        :isEditMode="false"
+                    />
                 </div>
             </div>
         </div>
@@ -49,6 +58,7 @@
     import TextTool from './TextTool';
     import ImgTool from './ImgTool';
     import HeritageTool from './HeritageTool';
+    import MarkdownTool from './MarkdownTool';
     import axios from 'axios';
 
 
@@ -56,7 +66,8 @@
         components: {
             TextTool,
             ImgTool,
-            HeritageTool
+            HeritageTool,
+            MarkdownTool
         },
         data() {
             return {
@@ -79,23 +90,39 @@
         methods: {
             // 模拟从后端获取画布数据
             getCanvas() {
-                // 发送 GET 请求到后端 API 获取画布数据
                 axios.get('http://localhost:8090/user/canvas/load')
                     .then(response => {
-                        // 假设返回的数据格式是这样的：
-                        // response.data = { texts: [], images: [] }
-                        const canvasData = response.data["data"];
-
-
-                        this.canvasItems = canvasData || []
-                        // 你可以在这里进行其他的处理，例如初始化轮播图的页数等
-                        // alert(JSON.stringify(canvasData, null, 2));
+                        const canvasData = response.data.data;
+                        if (canvasData) {
+                            // 处理每种类型的组件
+                            this.canvasItems = canvasData.map(item => ({
+                                texts: item.texts?.map(this.convertToPosition) || [],
+                                images: item.images?.map(this.convertToPosition) || [],
+                                heritages: item.heritages?.map(this.convertToPosition) || [],
+                                markdowns: item.markdowns?.map(this.convertToPosition) || []
+                            }));
+                        }
                     })
                     .catch(error => {
                         console.error('获取画布数据失败:', error);
                         alert('加载画布数据失败!');
                     });
             },
+
+            // 将组件的位置属性转换为position对象
+            convertToPosition(item) {
+                const { left, top, width, height, ...rest } = item;
+                return {
+                    ...rest,
+                    position: {
+                        left: left || 100,
+                        top: top || 100,
+                        width: width || 150,
+                        height: height || 150
+                    }
+                };
+            },
+
             // 开始自动播放
             startAutoPlay() {
                 if (!this.autoPlayTimer) {

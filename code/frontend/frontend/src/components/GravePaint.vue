@@ -14,6 +14,9 @@
                 <div class="tool" @click="addHeritageTool">
                     <p>遗产信息</p>
                 </div>
+                <div class="tool" @click="addMarkdownTool">
+                    <p>Markdown编辑器</p>
+                </div>
                 <div class="tool" @click="saveCanvas">
                     <p>保存画布</p>
                 </div>
@@ -28,18 +31,20 @@
                 <!-- 显示添加的文本框 -->
                 <TextTool
                         v-for="(item, index) in canvasItems.texts"
-                        :key="index"
+                        :key="'text-' + index"
                         :initialContent="item.content"
                         :initialPosition="item.position"
                         @updatePosition="updateTextPosition(index, $event)"
-                        />
+                        @delete="deleteComponent('text', index)"
+                />
                 <ImgTool
                         v-for="(item, index) in canvasItems.images"
                         :key="'img-' + index"
                         :initialImageUrl="item.imageUrl"
                         :initialPosition="item.position"
                         @updatePosition="updateImagePosition(index, $event)"
-                        />
+                        @delete="deleteComponent('image', index)"
+                />
                 <HeritageTool
                     v-for="(item, index) in canvasItems.heritages"
                     :key="'heritage-' + index"
@@ -47,6 +52,17 @@
                     @updatePosition="updateHeritagePosition(index, $event)"
                     @configureHeritage="configureHeritage(index, $event)"
                     @updateContent="updateHeritageContent(index, $event)"
+                    @delete="deleteComponent('heritage', index)"
+                />
+                <MarkdownTool
+                    v-for="(item, index) in canvasItems.markdowns"
+                    :key="'md-' + index"
+                    :initialContent="item.content"
+                    :initialPosition="item.position"
+                    :isEditMode="true"
+                    @updatePosition="updateMarkdownPosition(index, $event)"
+                    @updateContent="updateMarkdownContent(index, $event)"
+                    @delete="deleteComponent('markdown', index)"
                 />
             </div>
         </div>
@@ -57,20 +73,23 @@
     import TextTool from './TextTool.vue';
     import ImgTool from './ImgTool.vue';
     import HeritageTool from './HeritageTool.vue';
+    import MarkdownTool from './MarkdownTool.vue';
     import request from '../utils/request';
     export default {
         name: 'GravePaint',
         components: {
             TextTool,
             ImgTool,
-            HeritageTool
+            HeritageTool,
+            MarkdownTool
         },
         data() {
             return {
                 canvasItems:{ 
                     texts:[],
                     images: [],
-                    heritages: []
+                    heritages: [],
+                    markdowns: []
                 }// 用于存储添加到画布的元素
             };
         },
@@ -113,6 +132,18 @@
                 };
                 this.canvasItems.heritages.push(newHeritage);
             },
+            addMarkdownTool() {
+                const newMarkdown = {
+                    content: '# 新建Markdown\n请输入内容',
+                    position: {
+                        left: 100,
+                        top: 100,
+                        width: 400,
+                        height: 300
+                    }
+                };
+                this.canvasItems.markdowns.push(newMarkdown);
+            },
             updateTextPosition(index, newPosition) {
                 this.canvasItems.texts[index].position = newPosition;
             },
@@ -129,11 +160,18 @@
                 this.canvasItems.heritages[index].publicTime = content.publicTime;
                 this.canvasItems.heritages[index].items = content.items;
             },
+            updateMarkdownPosition(index, newPosition) {
+                this.canvasItems.markdowns[index].position = newPosition;
+            },
+            updateMarkdownContent(index, content) {
+                this.canvasItems.markdowns[index].content = content;
+            },
             saveCanvas() {
                 const canvasData = {
                     texts: this.canvasItems.texts,
                     images: this.canvasItems.images,
-                    heritages: this.canvasItems.heritages
+                    heritages: this.canvasItems.heritages,
+                    markdowns: this.canvasItems.markdowns
                 };
 
                 request.post('/user/canvas/save', canvasData)
@@ -144,6 +182,22 @@
                         console.error('保存画布数据失败:', error);
                         alert('保存失败!');
                     });
+            },
+            deleteComponent(type, index) {
+                switch(type) {
+                    case 'text':
+                        this.canvasItems.texts.splice(index, 1);
+                        break;
+                    case 'image':
+                        this.canvasItems.images.splice(index, 1);
+                        break;
+                    case 'heritage':
+                        this.canvasItems.heritages.splice(index, 1);
+                        break;
+                    case 'markdown':
+                        this.canvasItems.markdowns.splice(index, 1);
+                        break;
+                }
             }
         }
     };

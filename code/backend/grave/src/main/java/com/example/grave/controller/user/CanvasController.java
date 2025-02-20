@@ -25,7 +25,7 @@ import com.example.grave.pojo.entity.HeritageItem;
 
 @CrossOrigin(origins = "http://localhost:8080")
 @RestController
-@RequestMapping("/canvas")
+@RequestMapping("/user/canvas")
 public class CanvasController {
     
     @Autowired

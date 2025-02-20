@@ -12,6 +12,7 @@ import com.example.grave.pojo.dto.CanvasDTO;
 import com.example.grave.pojo.entity.Heritage;
 import com.example.grave.pojo.entity.HeritageItem;
 import com.example.grave.pojo.entity.ImageBox;
+import com.example.grave.pojo.entity.MarkdownBox;
 import com.example.grave.pojo.entity.TextBox;
 
 
@@ -23,12 +24,37 @@ public interface CanvasMapper {
     public void insertHeritages(Heritage heritage);
     public void insertHeritageItems(Heritage heritage);
     @Select("SELECT * FROM ImageBox WHERE pid = #{pid}")   
+    @Results({
+        @Result(property = "left", column = "left_location"),
+        @Result(property = "top", column = "top_location"),
+        @Result(property = "width", column = "width_location"),
+        @Result(property = "height", column = "height_location")
+    })
     public List<ImageBox> getImages(long pid);
-
+    @Results({
+        @Result(property = "left", column = "left_location"),
+        @Result(property = "top", column = "top_location"),
+        @Result(property = "width", column = "width_location"),
+        @Result(property = "height", column = "height_location")
+    })
     @Select("SELECT * FROM TextBox WHERE pid = #{pid}")
     public List<TextBox> getTexts(long pid   ); 
-
+    
+    @Select("SELECT * FROM markdown WHERE pid = #{pid}")
+    @Results({
+        @Result(property = "left", column = "left_location"),
+        @Result(property = "top", column = "top_location"),
+        @Result(property = "width", column = "width_location"),
+        @Result(property = "height", column = "height_location")
+    })
+    public List<MarkdownBox> getMarkdowns(long pid);
     @Select("SELECT * FROM heritage WHERE pid = #{pid}")
+    @Results({
+        @Result(property = "left", column = "left_location"),
+        @Result(property = "top", column = "top_location"),
+        @Result(property = "width", column = "width_location"),
+        @Result(property = "height", column = "height_location")
+    })
     public List<Heritage> getHeritages(long pid);
 
     @Select("SELECT * FROM heritage_item WHERE heritage_id = #{heritageId}")
@@ -66,4 +92,10 @@ public interface CanvasMapper {
     @Select("SELECT * FROM heritage_item WHERE heritage_id = #{heritageId} " +
             "AND is_private = true AND user_id = 0")
     List<HeritageItem> getUnclaimedPrivateHeritageItems(Long heritageId);
+
+    /**
+     * 插入markdown信息
+     */
+    
+    void insertMarkdowns(CanvasDTO canvasDTO);
 }

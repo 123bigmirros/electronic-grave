@@ -12,6 +12,7 @@ import com.example.grave.pojo.dto.CanvasDTO;
 import com.example.grave.pojo.entity.Heritage;
 import com.example.grave.pojo.entity.HeritageItem;
 import com.example.grave.pojo.entity.ImageBox;
+import com.example.grave.pojo.entity.MarkdownBox;
 import com.example.grave.pojo.entity.TextBox;
 import com.example.grave.pojo.vo.CanvasVO;
 import com.example.grave.service.CanvasService;
@@ -45,6 +46,13 @@ public class CanvasServiceImp implements CanvasService {
                 canvasMapper.insertHeritageItems(heritage);
             }
         }
+        // 保存markdown信息
+        if (canvasDTO.getMarkdowns() != null && !canvasDTO.getMarkdowns().isEmpty()) {
+            for(MarkdownBox markdown:canvasDTO.getMarkdowns()){
+                
+                canvasMapper.insertMarkdowns(canvasDTO);
+            }
+        }
     }
 
 
@@ -65,6 +73,7 @@ public class CanvasServiceImp implements CanvasService {
             CanvasVO canvasVO = new CanvasVO();
             canvasVO.setImages(canvasMapper.getImages(canvasDTO.getId()));
             canvasVO.setTexts(canvasMapper.getTexts(canvasDTO.getId()));
+           
             List<Heritage> heritages = canvasMapper.getHeritages(canvasDTO.getId());
             // for(Heritage heritage:heritages){
             //     heritage.setItems(canvasMapper.getHeritageItems(heritage.getId()));
