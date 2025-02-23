@@ -4,8 +4,8 @@
 <mapper namespace="com.example.grave.mapper.CanvasMapper">
 
    <insert id="saveCanvas" parameterType="com.example.grave.pojo.dto.CanvasDTO" useGeneratedKeys="true" keyProperty="id">
-    INSERT INTO CanvasDTO ( uId)
-    VALUES (#{userId});
+    INSERT INTO CanvasDTO ( uId,title,isPublic)
+    VALUES (#{userId},#{title},#{isPublic});
 </insert>
 
 <insert id="insertTextBoxes" parameterType="com.example.grave.pojo.dto.CanvasDTO">

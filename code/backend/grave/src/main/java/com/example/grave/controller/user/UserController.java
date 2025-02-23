@@ -23,6 +23,7 @@ public class UserController {
     @PostMapping("/login")
     public Result<UserVO> login(@RequestBody UserLoginDTO userLoginDTO){
         UserVO userLoginVO = userService.login(userLoginDTO);
+        // System.out.println(userLoginVO.getId());
         return Result.success(userLoginVO);
     }
     

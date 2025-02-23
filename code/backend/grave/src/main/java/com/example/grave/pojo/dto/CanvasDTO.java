@@ -13,6 +13,8 @@ import lombok.Data;
 public class CanvasDTO {
     private long id;
     private long userId;
+    private String title;
+    private boolean isPublic;
     private List<ImageBox> images;
     private List<TextBox> texts;
     private List<Heritage> heritages;

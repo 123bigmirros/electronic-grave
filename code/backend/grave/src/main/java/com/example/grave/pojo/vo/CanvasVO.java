@@ -18,6 +18,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CanvasVO implements Serializable {
+    private long id;
+    private String title;
+    private boolean isPublic;
     private List<ImageBox> images;
     private List<TextBox> texts; 
     private List<Heritage> heritages;

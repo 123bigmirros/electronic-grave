@@ -1,18 +1,21 @@
 package com.example.grave.interceptor;
 
-import org.springframework.messaging.handler.HandlerMethod;
-import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
+
 
 import com.example.grave.common.context.BaseContext;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtTokenAdminInterceptor implements HandlerInterceptor {
 
+    @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("拦截器被触发了！");
         //判断当前拦截到的是Controller的方法还是其他资源
         if (!(handler instanceof HandlerMethod)) {
             //当前拦截到的不是动态方法，直接放行
@@ -21,10 +24,10 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
 
         //1、从请求头中获取令牌
         String token = request.getHeader("userId");
-        if(token == null){token = "-1";}
+        // System.out.println(token);
+        if(token == null||token.equals("undefined")){token = "-1";}
         //2、校验令牌
         try {
-            System.out.println("wocao");
             Long userId = Long.parseLong(token);
             BaseContext.setCurrentId(userId);
             //3、通过，放行

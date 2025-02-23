@@ -60,7 +60,7 @@ public interface CanvasMapper {
     @Select("SELECT * FROM heritage_item WHERE heritage_id = #{heritageId}")
     public List<HeritageItem> getHeritageItems(long heritageId);
 
-    @Select("SELECT * FROM CanvasDTO ORDER BY RAND() LIMIT 20;")
+    @Select("SELECT * FROM CanvasDTO WHERE isPublic = true ORDER BY RAND() LIMIT 20;")
     @Results({
     @Result(property = "id", column = "id"),
     @Result(property = "userId", column = "uId")

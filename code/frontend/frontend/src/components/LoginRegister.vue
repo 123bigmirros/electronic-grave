@@ -80,13 +80,18 @@ export default {
           password: this.formData.password
         })
 
-        if (response.data.id !== -1) {
-          // 存储用户ID，用于后续请求
-          localStorage.setItem('userId', response.data.id);
-          
-          this.$router.push('/')
+        if (response.data.code === 1) {  // 假设后端成功状态码为1
+          // 从response.data.data中获取用户信息
+          const userData = response.data.data;
+          if (userData.id !== -1) {
+            // 存储用户ID
+            localStorage.setItem('userId', userData.id);
+            this.$router.push('/')
+          } else {
+            this.$router.push('/login')
+          }
         } else {
-          alert(response.data.message)
+          alert(response.data.msg || '登录失败')
         }
       } catch (error) {
         alert(error.response?.data?.message || '操作失败，请稍后重试')

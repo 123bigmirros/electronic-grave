@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.grave.common.context.BaseContext;
 import com.example.grave.common.result.Result;
 import com.example.grave.pojo.dto.CanvasDTO;
 import com.example.grave.pojo.entity.Heritage;
@@ -23,7 +24,7 @@ import com.example.grave.pojo.entity.HeritageItem;
 
 
 
-@CrossOrigin(origins = "http://localhost:8080")
+// @CrossOrigin(origins = "http://localhost:8080")
 @RestController
 @RequestMapping("/user/canvas")
 public class CanvasController {
@@ -33,7 +34,11 @@ public class CanvasController {
     @PostMapping("/save")
     public Result submit(@RequestBody CanvasDTO canvasDTO){
         // canvasDTO.setId((new Random()).nextLong(10000));
-        canvasDTO.setUserId((long) 1);
+        Long userId= BaseContext.getCurrentId();
+        if(userId == -1){
+            return Result.error("用户未登录");
+        }
+        canvasDTO.setUserId(userId);
         
         canvasService.saveCanvas(canvasDTO);
         return Result.success();

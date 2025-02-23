@@ -66,6 +66,27 @@
                 />
             </div>
         </div>
+
+        <!-- 添加保存画布对话框 -->
+        <div v-if="showSaveDialog" class="save-dialog-overlay">
+            <div class="save-dialog">
+                <h3>保存画布</h3>
+                <div class="form-group">
+                    <label>画布标题：</label>
+                    <input type="text" v-model="canvasTitle" placeholder="请输入画布标题" />
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" v-model="isPublic">
+                        是否公开画布
+                    </label>
+                </div>
+                <div class="dialog-buttons">
+                    <button @click="confirmSave" class="save-btn">保存</button>
+                    <button @click="cancelSave" class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -90,7 +111,10 @@
                     images: [],
                     heritages: [],
                     markdowns: []
-                }// 用于存储添加到画布的元素
+                },// 用于存储添加到画布的元素
+                showSaveDialog: false,
+                canvasTitle: '',
+                isPublic: true
             };
         },
         methods: {
@@ -167,21 +191,47 @@
                 this.canvasItems.markdowns[index].content = content;
             },
             saveCanvas() {
+                this.showSaveDialog = true;
+            },
+            cancelSave() {
+                this.showSaveDialog = false;
+                this.canvasTitle = '';
+            },
+            confirmSave() {
+                if (!this.canvasTitle.trim()) {
+                    alert('请输入画布标题！');
+                    return;
+                }
+
                 const canvasData = {
+                    title: this.canvasTitle,
+                    isPublic: this.isPublic,
                     texts: this.canvasItems.texts,
                     images: this.canvasItems.images,
                     heritages: this.canvasItems.heritages,
                     markdowns: this.canvasItems.markdowns
                 };
 
-                request.post('/user/canvas/save', canvasData)
-                    .then(() => {
+                request({
+                    method: 'post',
+                    url: '/user/canvas/save',
+                    data: canvasData,
+                    headers: {
+                        "userId": localStorage.getItem('userId'),
+                    }
+                })
+                .then(response => {
+                    if (response.data.code === 1) {
                         alert('画布保存成功!');
-                    })
-                    .catch(error => {
-                        console.error('保存画布数据失败:', error);
-                        alert('保存失败!');
-                    });
+                        this.showSaveDialog = false;
+                    } else {
+                        alert('保存失败：' + response.data.msg);
+                    }
+                })
+                .catch(error => {
+                    console.error('保存画布数据失败:', error);
+                    alert('保存失败，请检查网络连接');
+                });
             },
             deleteComponent(type, index) {
                 switch(type) {
@@ -198,6 +248,14 @@
                         this.canvasItems.markdowns.splice(index, 1);
                         break;
                 }
+            }
+        },
+        mounted() {
+            // 检查用户是否登录
+            const userId = localStorage.getItem('userId');
+            if (!userId || userId === 'undefined') {
+                this.$router.push('/login');
+                return;
             }
         }
     };
@@ -252,5 +310,78 @@
     padding: 20px;
     box-sizing: border-box;
     overflow: hidden;
+}
+
+.save-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.save-dialog {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin: 15px 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-group input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.save-btn, .cancel-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.save-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.cancel-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.save-btn:hover {
+    background-color: #45a049;
+}
+
+.cancel-btn:hover {
+    background-color: #da190b;
 }
 </style>
