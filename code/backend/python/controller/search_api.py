@@ -34,40 +34,56 @@ def search():
     try:
         data = request.json
         query = data.get('query', '')
-        user_id = data.get('user_id')
+        user_id = data.get('user_id')  # 从请求中获取user_id
         chat_history = data.get('chat_history', [])
         
-        # 根据用户ID选择搜索范围
-        if user_id and user_id in processor.user_indices:
-            vectorstore = processor.user_indices[user_id]
-        else:
-            vectorstore = processor.global_index
-            
-        if not vectorstore:
+        if not processor.global_index:
             return jsonify({"error": "No search index available"}), 404
-            
-        qa_chain = ConversationalRetrievalChain.from_llm(
-            ChatOpenAI(temperature=0),
-            vectorstore.as_retriever(),
-            return_source_documents=True
+        
+        # 使用向量存储的相似度搜索直接获取相关文档
+        docs_with_scores = processor.similarity_search_with_score(
+            query,
+            k=10,  # 最多返回10个结果
+            user_id=user_id  # 传入user_id用于权限控制
         )
         
-        result = qa_chain({
-            "question": query,
-            "chat_history": chat_history
-        })
+        # 过滤掉相似度低于阈值的结果
+        SIMILARITY_THRESHOLD = 0.7  # 相似度阈值
+        filtered_docs = [
+            (doc, score) for doc, score in docs_with_scores 
+            if score >= SIMILARITY_THRESHOLD
+        ]
         
+        # 构建响应
         response = {
-            "answer": result["answer"],
             "sources": [
                 {
                     "canvas_id": doc.metadata["canvas_id"],
                     "title": doc.metadata["title"],
-                    "created_at": doc.metadata["created_at"]
+                    "created_at": doc.metadata["created_at"],
+                    "similarity_score": float(score),
+                    "content_preview": doc.page_content[:200] + "..."
                 }
-                for doc in result["source_documents"]
+                for doc, score in filtered_docs
             ]
         }
+        
+        # 如果需要AI回答，使用ConversationalRetrievalChain
+        if data.get('need_ai_response', False):
+            qa_chain = ConversationalRetrievalChain.from_llm(
+                ChatOpenAI(temperature=0),
+                processor.global_index.as_retriever(
+                    search_kwargs={"user_id": user_id}  # 传入user_id用于权限控制
+                ),
+                return_source_documents=True
+            )
+            
+            result = qa_chain({
+                "question": query,
+                "chat_history": chat_history
+            })
+            
+            response["answer"] = result["answer"]
         
         return jsonify(response)
         

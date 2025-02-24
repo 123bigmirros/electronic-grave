@@ -78,4 +78,35 @@ class CanvasProcessor:
             self.global_index.save_local("faiss_indices/global_index")
             # 保存映射关系
             with open("faiss_indices/canvas_mapping.pkl", "wb") as f:
-                pickle.dump(self.canvas_doc_mapping, f) 
+                pickle.dump(self.canvas_doc_mapping, f)
+
+    def similarity_search_with_score(self, query: str, k: int = 10, user_id: str = None):
+        """
+        执行相似度搜索并返回文档及其相似度分数，同时进行权限控制
+        
+        Args:
+            query (str): 搜索查询文本
+            k (int): 返回结果的最大数量
+            user_id (str): 当前用户ID，用于权限控制
+            
+        Returns:
+            List[Tuple[Document, float]]: 包含文档和相似度分数的列表
+        """
+        if not self.global_index:
+            return []
+        
+        # 获取所有匹配的文档
+        docs_with_scores = self.global_index.similarity_search_with_score(query, k=k)
+        
+        # 根据权限过滤文档
+        filtered_docs = []
+        for doc, score in docs_with_scores:
+            # 如果文档是公开的，或者用户是文档的所有者，则允许访问
+            if doc.metadata.get("is_public", True) or doc.metadata.get("user_id") == user_id:
+                filtered_docs.append((doc, score))
+            
+            # 如果已经收集了足够的文档，就停止
+            if len(filtered_docs) >= k:
+                break
+            
+        return filtered_docs 
