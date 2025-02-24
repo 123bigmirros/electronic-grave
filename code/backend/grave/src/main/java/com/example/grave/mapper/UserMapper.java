@@ -13,4 +13,7 @@ public interface UserMapper {
 
     @Select("SELECT * FROM user WHERE username = #{username}")
     public UserVO getUserByUsername(String username);
+    
+    @Select("SELECT * FROM user WHERE id = #{userId}")
+    public UserVO getUserById(Long userId);
 }

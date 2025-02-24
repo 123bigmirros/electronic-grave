@@ -114,7 +114,8 @@
                 },// 用于存储添加到画布的元素
                 showSaveDialog: false,
                 canvasTitle: '',
-                isPublic: true
+                isPublic: true,
+                canvasId: null  // 新增：存储画布ID
             };
         },
         methods: {
@@ -204,6 +205,7 @@
                 }
 
                 const canvasData = {
+                    id: this.canvasId,
                     title: this.canvasTitle,
                     isPublic: this.isPublic,
                     texts: this.canvasItems.texts,
@@ -222,15 +224,22 @@
                 })
                 .then(response => {
                     if (response.data.code === 1) {
-                        alert('画布保存成功!');
-                        this.showSaveDialog = false;
+                        this.canvasId = response.data.data;
+                        // 调用embedding API
+                        request({
+                            method: 'post',
+                            url: '/api/canvas/embedding',
+                            data: {
+                                canvas_id: this.canvasId
+                            }
+                        });
                     } else {
-                        alert('保存失败：' + response.data.msg);
+                        throw new Error('保存失败：' + response.data.msg);
                     }
                 })
                 .catch(error => {
-                    console.error('保存画布数据失败:', error);
-                    alert('保存失败，请检查网络连接');
+                    console.error('操作失败:', error);
+                    alert('操作失败，请检查网络连接');
                 });
             },
             deleteComponent(type, index) {
@@ -248,6 +257,82 @@
                         this.canvasItems.markdowns.splice(index, 1);
                         break;
                 }
+            },
+            // 新增：加载现有画布数据
+            async loadCanvasData() {
+                const canvasId = this.$route.params.id;
+
+                if (!canvasId||canvasId==="undefined") {
+                    this.canvasId = -1;
+                    return;
+                }
+                
+                this.canvasId = canvasId;
+                try {
+                    const response = await request({
+                        url: `/user/canvas/get/${canvasId}`,
+                        method: 'get',
+                        headers: {
+                            "userId": localStorage.getItem('userId')
+                        }
+                    });
+
+                    if (response.data.code === 1) {
+                        const canvasData = response.data.data;
+                        // 更新画布标题和公开状态
+                        this.canvasTitle = canvasData.title;
+                        this.isPublic = canvasData.isPublic;
+                        
+                        // 确保每个数组都有默认值，防止后端返回null
+                        this.canvasItems = {
+                            texts: canvasData.texts?.map(text => ({
+                                content: text.content,
+                                position: {
+                                    left: text.left,
+                                    top: text.top,
+                                    width: text.width,
+                                    height: text.height
+                                }
+                            })) || [],
+                            
+                            images: canvasData.images?.map(image => ({
+                                imageUrl: image.imageUrl,
+                                position: {
+                                    left: image.left,
+                                    top: image.top,
+                                    width: image.width,
+                                    height: image.height
+                                }
+                            })) || [],
+                            
+                            heritages: canvasData.heritages?.map(heritage => ({
+                                position: {
+                                    left: heritage.left,
+                                    top: heritage.top,
+                                    width: heritage.width,
+                                    height: heritage.height
+                                },
+                                publicTime: heritage.publicTime,
+                                items: heritage.items || []
+                            })) || [],
+                            
+                            markdowns: canvasData.markdowns?.map(markdown => ({
+                                content: markdown.content,
+                                position: {
+                                    left: markdown.left,
+                                    top: markdown.top,
+                                    width: markdown.width,
+                                    height: markdown.height
+                                }
+                            })) || []
+                        };
+                    } else {
+                        alert('加载画布失败：' + response.data.msg);
+                    }
+                } catch (error) {
+                    console.error('加载画布数据失败:', error);
+                    alert('加载画布失败，请稍后重试');
+                }
             }
         },
         mounted() {
@@ -257,6 +342,9 @@
                 this.$router.push('/login');
                 return;
             }
+
+            // 加载画布数据
+            this.loadCanvasData();
         }
     };
 </script>

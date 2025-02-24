@@ -8,7 +8,7 @@ import com.example.grave.pojo.entity.HeritageItem;
 
 public interface CanvasService {
 
-    public void saveCanvas(CanvasDTO canvasDTO);
+    public void saveCanvas(CanvasDTO canvasDTO,boolean justContent);
     public CanvasVO getCanvas(int userId,int id);
     public List<CanvasVO> loadCanvas();
 
@@ -21,4 +21,19 @@ public interface CanvasService {
      * 获取私密遗产内容
      */
     HeritageItem getPrivateHeritage(Long heritageId);
+
+    /**
+     * 获取用户画布列表
+     */
+    List<CanvasVO> getCanvasList(Long userId);
+
+    /**
+     * 删除画布
+     */
+    void deleteCanvas(long canvasId,boolean justContent);
+
+    /**
+     * 获取画布
+     */
+    CanvasVO getCanvasById(long userId,long canvasId);
 } 

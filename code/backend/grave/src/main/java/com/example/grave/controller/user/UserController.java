@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.grave.common.context.BaseContext;
 import com.example.grave.common.result.Result;
 import com.example.grave.pojo.dto.UserLoginDTO;
 import com.example.grave.pojo.dto.UserRegisterDTO;
@@ -32,6 +33,17 @@ public class UserController {
     @PostMapping("/register")
     public Result<UserVO> register(@RequestBody UserRegisterDTO userRegisterDTO){
         UserVO userVO = userService.register(userRegisterDTO);
+        return Result.success(userVO);
+    }
+
+    @PostMapping("/get")
+    public Result<UserVO> getUserInfo(){
+        System.out.println("getUserInfo");
+        Long userId = BaseContext.getCurrentId();
+        if(userId == -1){
+            return Result.error("用户未登录");
+        }
+        UserVO userVO = userService.getUserInfo(userId);
         return Result.success(userVO);
     }
 }

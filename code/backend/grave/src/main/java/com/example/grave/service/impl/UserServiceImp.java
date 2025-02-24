@@ -41,5 +41,11 @@ public class UserServiceImp implements UserService {
         UserVO userVO = userMapper.register(userRegisterDTO);
         return userVO;
     }
+
+    @Override
+    public UserVO getUserInfo(Long userId) {
+        UserVO userVO = userMapper.getUserById(userId);
+        return userVO;
+    }
     
 }

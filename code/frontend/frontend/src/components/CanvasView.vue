@@ -1,0 +1,108 @@
+<template>
+    <div class="canvas-view">
+        <!-- 复用 GravePaint 的大部分模板，但移除工具栏和编辑功能 -->
+        <div class="canvas">
+            <h3>{{ canvasTitle }}</h3>
+            <TextTool
+                v-for="(item, index) in canvasItems.texts"
+                :key="'text-' + index"
+                :initialContent="item.content"
+                :initialPosition="item.position"
+                :readonly="true"
+            />
+            <ImgTool
+                v-for="(item, index) in canvasItems.images"
+                :key="'img-' + index"
+                :initialImageUrl="item.imageUrl"
+                :initialPosition="item.position"
+                :readonly="true"
+            />
+            <HeritageTool
+                v-for="(item, index) in canvasItems.heritages"
+                :key="'heritage-' + index"
+                :initialPosition="item.position"
+                :readonly="true"
+                :content="item"
+            />
+            <MarkdownTool
+                v-for="(item, index) in canvasItems.markdowns"
+                :key="'md-' + index"
+                :initialContent="item.content"
+                :initialPosition="item.position"
+                :readonly="true"
+            />
+        </div>
+    </div>
+</template>
+
+<script>
+import TextTool from './TextTool.vue';
+import ImgTool from './ImgTool.vue';
+import HeritageTool from './HeritageTool.vue';
+import MarkdownTool from './MarkdownTool.vue';
+import request from '../utils/request';
+
+export default {
+    name: 'CanvasView',
+    components: {
+        TextTool,
+        ImgTool,
+        HeritageTool,
+        MarkdownTool
+    },
+    data() {
+        return {
+            canvasTitle: '',
+            canvasItems: {
+                texts: [],
+                images: [],
+                heritages: [],
+                markdowns: []
+            }
+        };
+    },
+    async mounted() {
+        await this.loadCanvasData();
+    },
+    methods: {
+        async loadCanvasData() {
+            const canvasId = this.$route.params.id;
+            try {
+                const response = await request({
+                    url: `/user/canvas/get/${canvasId}`,
+                    method: 'get'
+                });
+
+                if (response.data.code === 1) {
+                    const canvasData = response.data.data;
+                    this.canvasTitle = canvasData.title;
+                    this.canvasItems = {
+                        texts: canvasData.texts || [],
+                        images: canvasData.images || [],
+                        heritages: canvasData.heritages || [],
+                        markdowns: canvasData.markdowns || []
+                    };
+                }
+            } catch (error) {
+                console.error('加载画布数据失败:', error);
+            }
+        }
+    }
+};
+</script>
+
+<style scoped>
+.canvas-view {
+    padding: 20px;
+    height: 100vh;
+    overflow: auto;
+}
+
+.canvas {
+    background-color: #fafafa;
+    padding: 20px;
+    border-radius: 8px;
+    min-height: 600px;
+    position: relative;
+}
+</style> 

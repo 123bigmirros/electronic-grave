@@ -2,11 +2,15 @@ package com.example.grave.mapper;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectKey;
 import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.Options;
 
 import com.example.grave.pojo.dto.CanvasDTO;
 import com.example.grave.pojo.entity.Heritage;
@@ -14,10 +18,13 @@ import com.example.grave.pojo.entity.HeritageItem;
 import com.example.grave.pojo.entity.ImageBox;
 import com.example.grave.pojo.entity.MarkdownBox;
 import com.example.grave.pojo.entity.TextBox;
+import com.example.grave.pojo.vo.CanvasVO;
 
 
 
 public interface CanvasMapper {
+    @Insert("INSERT INTO CanvasDTO (uId, title, isPublic) VALUES (#{userId}, #{title}, #{isPublic})")
+    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     public long saveCanvas(CanvasDTO canvasDTO);
     public void insertImageBoxes(CanvasDTO canvasDTO);
     public void insertTextBoxes(CanvasDTO canvasDTO);
@@ -98,4 +105,53 @@ public interface CanvasMapper {
      */
     
     void insertMarkdowns(CanvasDTO canvasDTO);
+    
+
+    /**
+     * 获取用户画布列表
+     */
+    @Select("SELECT * FROM CanvasDTO WHERE uId = #{userId}")
+    List<CanvasVO> getCanvasList(Long userId);
+
+    /**
+     * 删除画布
+     */
+    @Delete("DELETE FROM CanvasDTO WHERE id = #{canvasId}")
+    void deleteCanvas(Long canvasId);
+
+    /**
+     * 删除遗产
+     */
+    @Delete("DELETE FROM heritage WHERE pid = #{canvasId}")
+    List<Heritage> deleteHeritages(Long canvasId);
+
+    /**
+     * 删除遗产项
+     */
+    @Delete("DELETE FROM heritage_item WHERE heritage_id = #{heritageId}")
+    void deleteHeritageItems(Long heritageId);
+    
+    /**
+     * 删除图片
+     */
+    @Delete("DELETE FROM ImageBox WHERE pid = #{canvasId}")
+    void deleteImages(Long canvasId);
+
+    /**
+     * 删除文本
+     */
+    @Delete("DELETE FROM TextBox WHERE pid = #{canvasId}")
+    void deleteTexts(Long canvasId);
+
+    /**
+     * 删除markdown
+     */
+    @Delete("DELETE FROM markdown WHERE pid = #{canvasId}")
+    void deleteMarkdowns(Long canvasId);
+
+    /**
+     * 获取画布
+     */
+    @Select("SELECT * FROM CanvasDTO WHERE id = #{canvasId} AND uId = #{userId}")
+    CanvasVO getCanvasBy2Id(Long userId, Long canvasId);
 }

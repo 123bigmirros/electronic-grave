@@ -7,4 +7,5 @@ import com.example.grave.pojo.vo.UserVO;
 public interface UserService {
     public UserVO login(UserLoginDTO userLoginDTO);
     public UserVO register(UserRegisterDTO userRegisterDTO);
+    public UserVO getUserInfo(Long userId);
 }

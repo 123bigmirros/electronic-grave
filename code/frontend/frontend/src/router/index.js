@@ -7,10 +7,16 @@ import LoginRegister from '../components/LoginRegister.vue'
 import PersonalPage from '../components/PersonalPage.vue'
 
 const routes = [
-    { path: '/gravepaint', component: GravePaint },  // 改为小写
+    { path: '/gravepaint', component: GravePaint },  // 新建画布路由
+    { path: '/gravepaint/:id', component: GravePaint },  // 添加编辑画布路由，带ID参数
     { path: '/',component:HomePage},
     { path: '/Login',component:LoginRegister},
-    { path: '/personal', component: PersonalPage }  // 添加个人主页路由
+    { path: '/personal', component: PersonalPage },  // 添加个人主页路由
+    {
+        path: '/canvas/view/:id',
+        name: 'CanvasView',
+        component: () => import('../components/CanvasView.vue')
+    }
 ];
 
 const router = createRouter({

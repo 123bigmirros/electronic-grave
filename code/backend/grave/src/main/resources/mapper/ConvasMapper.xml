@@ -2,11 +2,12 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.grave.mapper.CanvasMapper">
-
+<!-- 
    <insert id="saveCanvas" parameterType="com.example.grave.pojo.dto.CanvasDTO" useGeneratedKeys="true" keyProperty="id">
     INSERT INTO CanvasDTO ( uId,title,isPublic)
     VALUES (#{userId},#{title},#{isPublic});
-</insert>
+
+</insert> -->
 
 <insert id="insertTextBoxes" parameterType="com.example.grave.pojo.dto.CanvasDTO">
     <foreach collection="texts" item="text">
@@ -34,10 +35,10 @@
     VALUES (
         #{pid},
         #{publicTime},
-        #{position.left},
-        #{position.top},
-        #{position.width},
-        #{position.height}
+        #{left},
+        #{top},
+        #{width},
+        #{height}
     )
 </insert>
 

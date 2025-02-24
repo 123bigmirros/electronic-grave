@@ -23,10 +23,14 @@ public class CanvasServiceImp implements CanvasService {
     private CanvasMapper canvasMapper;
 
     
-    public void saveCanvas(CanvasDTO canvasDTO) {
+    public void saveCanvas(CanvasDTO canvasDTO,boolean justContent) {
         // 保存画布主信息并获取生成的ID
-        long id = canvasMapper.saveCanvas(canvasDTO);
-        canvasDTO.setId(id);
+        if(!justContent){
+            canvasMapper.saveCanvas(canvasDTO);
+        }
+        // System.out.println("ocao");
+        // System.out.println(canvasDTO.getId());
+
         
         // 保存图片盒子
         if (canvasDTO.getImages() != null && !canvasDTO.getImages().isEmpty()) {
@@ -43,15 +47,16 @@ public class CanvasServiceImp implements CanvasService {
             for(Heritage heritage:canvasDTO.getHeritages()){
                 heritage.setPid(canvasDTO.getId());
                 canvasMapper.insertHeritages(heritage);
-                canvasMapper.insertHeritageItems(heritage);
+                if (heritage.getItems() != null && !heritage.getItems().isEmpty()) {
+                    canvasMapper.insertHeritageItems(heritage);
+                }
             }
         }
         // 保存markdown信息
         if (canvasDTO.getMarkdowns() != null && !canvasDTO.getMarkdowns().isEmpty()) {
-            for(MarkdownBox markdown:canvasDTO.getMarkdowns()){
-                
-                canvasMapper.insertMarkdowns(canvasDTO);
-            }
+            
+            canvasMapper.insertMarkdowns(canvasDTO);
+            
         }
     }
 
@@ -78,6 +83,8 @@ public class CanvasServiceImp implements CanvasService {
             // for(Heritage heritage:heritages){
             //     heritage.setItems(canvasMapper.getHeritageItems(heritage.getId()));
             // }
+            List<MarkdownBox> markdowns = canvasMapper.getMarkdowns(canvasDTO.getId());
+            canvasVO.setMarkdowns(markdowns);
             canvasVO.setHeritages(heritages);
             canvasVOs.add(canvasVO);
         }
@@ -128,4 +135,47 @@ public class CanvasServiceImp implements CanvasService {
 
         return null;  // 未抽中或更新失败
     }
+
+
+    @Override
+    public List<CanvasVO> getCanvasList(Long userId) {
+        List<CanvasVO> canvasVOs = canvasMapper.getCanvasList(userId);
+        return canvasVOs;
+    }
+
+    @Override
+    public void deleteCanvas(long canvasId,boolean justContent) {
+        if(!justContent){
+            canvasMapper.deleteCanvas(canvasId);
+        }
+        List<Heritage> heritages = canvasMapper.getHeritages(canvasId);
+        for(Heritage heritage:heritages){
+            canvasMapper.deleteHeritageItems(heritage.getId());
+        }
+        canvasMapper.deleteImages(canvasId);
+        canvasMapper.deleteTexts(canvasId);
+        canvasMapper.deleteMarkdowns(canvasId);
+    }
+
+
+    @Override
+    public CanvasVO getCanvasById(long userId,long canvasId){
+        CanvasVO canvasVO = canvasMapper.getCanvasBy2Id(userId,canvasId);
+        // System.out.println("canvasVO:"+canvasVO);
+        if (canvasVO == null) {
+            return null;
+        }
+        // System.out.println(canvasVO.getId());
+        canvasVO.setImages(canvasMapper.getImages(canvasId));
+        canvasVO.setTexts(canvasMapper.getTexts(canvasId));
+       
+        List<Heritage> heritages = canvasMapper.getHeritages(canvasId);
+        for(Heritage heritage:heritages){
+            heritage.setItems(canvasMapper.getHeritageItems(heritage.getId()));
+        }
+        canvasVO.setHeritages(heritages);
+        canvasVO.setMarkdowns(canvasMapper.getMarkdowns(canvasId));
+        return canvasVO;
+    }
+
 }

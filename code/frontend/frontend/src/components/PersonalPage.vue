@@ -47,7 +47,7 @@ export default {
             try {
                 const response = await request({
                     url: '/user/info/get',
-                    method: 'get',
+                    method: 'post',
                     headers: {
                         "userId": localStorage.getItem('userId')
                     }
@@ -55,9 +55,10 @@ export default {
                 
                 if (response.data.code === 1) {
                     this.username = response.data.data.username;
+                    // alert(this.username);
                 }
             } catch (error) {
-                console.error('获取用户信息失败:', error);
+                alert('获取用户信息失败:', error);
             }
         },
 
@@ -66,7 +67,7 @@ export default {
             try {
                 const response = await request({
                     url: '/user/canvas/list',
-                    method: 'get',
+                    method: 'post',
                     headers: {
                         "userId": localStorage.getItem('userId')
                     }
@@ -95,19 +96,18 @@ export default {
             if (!confirm('确定要删除这个画布吗？')) {
                 return;
             }
-
+            alert
             try {
                 const response = await request({
-                    url: '/user/canvas/delete',
-                    method: 'post',
-                    data: { canvasId },
+                    url: `/user/canvas/delete/${canvasId}`,
+                    method: 'get',
                     headers: {
                         "userId": localStorage.getItem('userId')
                     }
                 });
 
                 if (response.data.code === 1) {
-                    alert('删除成功');
+                    // alert('删除成功');
                     this.getCanvasList(); // 重新获取列表
                 } else {
                     alert('删除失败：' + response.data.msg);
