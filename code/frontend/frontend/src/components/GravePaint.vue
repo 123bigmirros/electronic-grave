@@ -1,5 +1,6 @@
 <template>
     <div id="app">
+        <SearchBox />
         <div class="container">
             <!-- 左侧工具栏 -->
             <div class="toolbar">
@@ -96,13 +97,16 @@
     import HeritageTool from './HeritageTool.vue';
     import MarkdownTool from './MarkdownTool.vue';
     import request from '../utils/request';
+    import request_py from '../utils/requests_py';
+    import SearchBox from './SearchBox.vue';
     export default {
         name: 'GravePaint',
         components: {
             TextTool,
             ImgTool,
             HeritageTool,
-            MarkdownTool
+            MarkdownTool,
+            SearchBox
         },
         data() {
             return {
@@ -203,11 +207,11 @@
                     alert('请输入画布标题！');
                     return;
                 }
-
+                alert(this.isPublic)
                 const canvasData = {
                     id: this.canvasId,
                     title: this.canvasTitle,
-                    isPublic: this.isPublic,
+                    isPublic: this.isPublic?1:0,
                     texts: this.canvasItems.texts,
                     images: this.canvasItems.images,
                     heritages: this.canvasItems.heritages,
@@ -226,13 +230,14 @@
                     if (response.data.code === 1) {
                         this.canvasId = response.data.data;
                         // 调用embedding API
-                        request({
+                        request_py({
                             method: 'post',
                             url: '/api/canvas/embedding',
                             data: {
                                 canvas_id: this.canvasId
                             }
                         });
+                        this.showSaveDialog = false;  // 关闭保存画布对话框
                     } else {
                         throw new Error('保存失败：' + response.data.msg);
                     }
@@ -241,6 +246,7 @@
                     console.error('操作失败:', error);
                     alert('操作失败，请检查网络连接');
                 });
+                
             },
             deleteComponent(type, index) {
                 switch(type) {

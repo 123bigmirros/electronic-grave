@@ -7,14 +7,14 @@
          @click="checkUserAuth"
          tabindex="0">
         <!-- 添加顶部导航栏 -->
-        <div class="top-nav">
-            <SearchBox />
+        <!-- <div class="top-nav">
+            
             <div class="nav-buttons">
                 <button @click="goToPersonal">个人主页</button>
                 <button @click="goToCreate">创作</button>
             </div>
-        </div>
-
+        </div> -->
+        <SearchBox />
         <!-- 轮播图 -->
         <div class="carousel">
             <div
@@ -226,19 +226,7 @@
                 }
             },
 
-            goToPersonal() {
-                const userId = localStorage.getItem('userId');
-                if (!userId || userId === 'undefined') {
-                    this.$router.push('/login');
-                    return;
-                }
-                this.$router.push('/personal');
-            },
             
-            goToCreate() {
-                console.log('尝试跳转到 gravepaint 页面');
-                this.$router.push('/gravepaint');
-            }
         },
     };
 </script>
@@ -279,32 +267,7 @@
     height: 100%;
 }
 
-.top-nav {
-    position: fixed;
-    top: 0;
-    right: 0;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    z-index: 1000;
-}
 
-.nav-buttons {
-    display: flex;
-    gap: 10px;
-}
 
-.nav-buttons button {
-    padding: 8px 15px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
 
-.nav-buttons button:hover {
-    background-color: #45a049;
-}
 </style>

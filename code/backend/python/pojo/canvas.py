@@ -12,8 +12,6 @@ class Canvas:
     user_id: int
     title: str
     is_public: bool
-    created_at: datetime
-    username: str = None
     images: List[ImageBox] = field(default_factory=list)
     texts: List[TextBox] = field(default_factory=list)
     heritages: List[Heritage] = field(default_factory=list)

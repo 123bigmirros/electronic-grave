@@ -20,31 +20,28 @@ class CanvasRepository:
         try:
             # 获取画布基本信息
             cursor.execute("""
-                SELECT c.*, u.username 
-                FROM canvas c
-                JOIN users u ON c.user_id = u.id
+                SELECT c.*
+                FROM canvasDTO c
                 WHERE c.id = %s
             """, (canvas_id,))
             canvas_data = cursor.fetchone()
-            
             if not canvas_data:
                 return None
-                
+            print(canvas_data)
             canvas = Canvas(
                 id=canvas_data['id'],
-                user_id=canvas_data['user_id'],
+                user_id=canvas_data['uId'],
                 title=canvas_data['title'],
-                created_at=canvas_data['created_at'],
-                is_public=canvas_data['is_public'],
-                username=canvas_data['username']
+                is_public=canvas_data['isPublic'],
             )
             
+            print(canvas)
             # 获取所有组件
             canvas.texts = self._get_text_boxes(cursor, canvas_id)
             canvas.images = self._get_image_boxes(cursor, canvas_id)
             canvas.heritages = self._get_heritages(cursor, canvas_id)
             canvas.markdowns = self._get_markdown_boxes(cursor, canvas_id)
-            
+            print(canvas)
             return canvas
             
         finally:
@@ -53,30 +50,31 @@ class CanvasRepository:
 
     def _get_text_boxes(self, cursor, canvas_id) -> List[TextBox]:
         cursor.execute("""
-            SELECT * FROM text_box WHERE pid = %s
+            SELECT * FROM textbox WHERE pid = %s
         """, (canvas_id,))
         return [TextBox(
             id=row['id'],
             pid=row['pid'],
             content=row['content'],
-            left=row['left'],
-            top=row['top'],
-            width=row['width'],
-            height=row['height']
+            left=row['left_location'],
+            top=row['top_location'],
+            width=row['width_location'],
+            height=row['height_location']
         ) for row in cursor.fetchall()]
 
     def _get_image_boxes(self, cursor, canvas_id) -> List[ImageBox]:
         cursor.execute("""
-            SELECT * FROM image_box WHERE pid = %s
+            SELECT * FROM imagebox WHERE pid = %s
+            
         """, (canvas_id,))
         return [ImageBox(
             id=row['id'],
             pid=row['pid'],
             image_url=row['image_url'],
-            left=row['left'],
-            top=row['top'],
-            width=row['width'],
-            height=row['height']
+            left=row['left_location'],
+            top=row['top_location'],
+            width=row['width_location'],
+            height=row['height_location']
         ) for row in cursor.fetchall()]
 
     def _get_heritages(self, cursor, canvas_id) -> List[Heritage]:
@@ -89,10 +87,10 @@ class CanvasRepository:
                 id=row['id'],
                 pid=row['pid'],
                 public_time=row['public_time'],
-                left=row['left'],
-                top=row['top'],
-                width=row['width'],
-                height=row['height']
+                left=row['left_location'],
+                top=row['top_location'],
+                width=row['width_location'],
+                height=row['height_location']
             )
             heritage.items = self._get_heritage_items(cursor, heritage.id)
             heritages.append(heritage)
@@ -112,16 +110,16 @@ class CanvasRepository:
 
     def _get_markdown_boxes(self, cursor, canvas_id) -> List[MarkdownBox]:
         cursor.execute("""
-            SELECT * FROM markdown_box WHERE pid = %s
+            SELECT * FROM markdown WHERE pid = %s
         """, (canvas_id,))
         return [MarkdownBox(
             id=row['id'],
             pid=row['pid'],
             content=row['content'],
-            left=row['left'],
-            top=row['top'],
-            width=row['width'],
-            height=row['height']
+            left=row['left_location'],
+            top=row['top_location'],
+            width=row['width_location'],
+            height=row['height_location']
         ) for row in cursor.fetchall()]
 
     def get_canvas_content_for_embedding(self, canvas_id: int) -> Optional[Document]:
@@ -134,7 +132,7 @@ class CanvasRepository:
             return None
 
         # 收集所有文本内容
-        text_contents = []
+        text_contents = ['title:'+canvas.title]
         
         # 添加普通文本框的内容
         for text_box in canvas.texts:

@@ -58,9 +58,8 @@ class CanvasProcessor:
         # 删除旧的文档
         if canvas_id in self.canvas_doc_mapping:
             old_doc_ids = self.canvas_doc_mapping[canvas_id]
-            docs_to_delete = [self.global_index.docstore._dict[doc_id] for doc_id in old_doc_ids]
-            if docs_to_delete:
-                self.global_index.delete(docs_to_delete)
+            # 直接使用文档ID进行删除，而不是Document对象
+            self.global_index.delete(old_doc_ids)
         
         # 添加新文档
         current_doc_count = len(self.global_index.docstore._dict)
@@ -97,16 +96,16 @@ class CanvasProcessor:
         
         # 获取所有匹配的文档
         docs_with_scores = self.global_index.similarity_search_with_score(query, k=k)
-        
         # 根据权限过滤文档
+        # print(docs_with_scores)
         filtered_docs = []
         for doc, score in docs_with_scores:
             # 如果文档是公开的，或者用户是文档的所有者，则允许访问
-            if doc.metadata.get("is_public", True) or doc.metadata.get("user_id") == user_id:
+            if doc.metadata.get("is_public", 1) or doc.metadata.get("user_id") == user_id:
                 filtered_docs.append((doc, score))
             
             # 如果已经收集了足够的文档，就停止
             if len(filtered_docs) >= k:
                 break
-            
+        # print(filtered_docs)
         return filtered_docs 

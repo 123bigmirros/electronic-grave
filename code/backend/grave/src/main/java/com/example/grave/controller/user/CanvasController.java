@@ -37,6 +37,7 @@ public class CanvasController {
     @PostMapping("/save")
     public Result submit(@RequestBody CanvasDTO canvasDTO){
         // canvasDTO.setId((new Random()).nextLong(10000));
+        System.out.println(canvasDTO.getIsPublic());
         Long userId= BaseContext.getCurrentId();
         if(userId == -1){
             return Result.error("用户未登录");

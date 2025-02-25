@@ -1,5 +1,6 @@
 <template>
     <div class="personal-page">
+        <SearchBox />
         <!-- 用户信息区域 -->
         <div class="user-info">
             <h2>个人主页</h2>
@@ -32,9 +33,12 @@
 
 <script>
 import request from '../utils/request';
-
+import SearchBox from './SearchBox.vue';
 export default {
     name: 'PersonalPage',
+    components: {
+        SearchBox
+    },
     data() {
         return {
             username: '',

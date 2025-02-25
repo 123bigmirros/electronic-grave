@@ -12,22 +12,23 @@ processor = CanvasProcessor()
 
 @app.route('/api/canvas/embedding', methods=['POST'])
 def save_embeddings():
-    try:
-        data = request.json
-        canvas_id = data['canvas_id']
+    # try:
+    data = request.json
+    canvas_id = data['canvas_id']
+    print(canvas_id)
+    if not canvas_id:
+        return jsonify({"error": "Missing canvas_id"}), 400
         
-        if not canvas_id:
-            return jsonify({"error": "Missing canvas_id"}), 400
+    success = processor.process_canvas(canvas_id)
+    
+    if success:
+        return jsonify({"message": "Canvas processed successfully"})
+    else:
+        return jsonify({"error": "Canvas not found"}), 404
             
-        success = processor.process_canvas(canvas_id)
-        
-        if success:
-            return jsonify({"message": "Canvas processed successfully"})
-        else:
-            return jsonify({"error": "Canvas not found"}), 404
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    # except Exception as e:
+    #     print(e)
+    return jsonify({"error": str(e)}), 500
 
 @app.route('/api/search', methods=['POST'])
 def search():
@@ -46,9 +47,9 @@ def search():
             k=10,  # 最多返回10个结果
             user_id=user_id  # 传入user_id用于权限控制
         )
-        
+        print(docs_with_scores)
         # 过滤掉相似度低于阈值的结果
-        SIMILARITY_THRESHOLD = 0.7  # 相似度阈值
+        SIMILARITY_THRESHOLD = 0.5  # 相似度阈值
         filtered_docs = [
             (doc, score) for doc, score in docs_with_scores 
             if score >= SIMILARITY_THRESHOLD
@@ -60,7 +61,6 @@ def search():
                 {
                     "canvas_id": doc.metadata["canvas_id"],
                     "title": doc.metadata["title"],
-                    "created_at": doc.metadata["created_at"],
                     "similarity_score": float(score),
                     "content_preview": doc.page_content[:200] + "..."
                 }
@@ -68,26 +68,26 @@ def search():
             ]
         }
         
-        # 如果需要AI回答，使用ConversationalRetrievalChain
-        if data.get('need_ai_response', False):
-            qa_chain = ConversationalRetrievalChain.from_llm(
-                ChatOpenAI(temperature=0),
-                processor.global_index.as_retriever(
-                    search_kwargs={"user_id": user_id}  # 传入user_id用于权限控制
-                ),
-                return_source_documents=True
-            )
+        # # 如果需要AI回答，使用ConversationalRetrievalChain
+        # if data.get('need_ai_response', False):
+        #     qa_chain = ConversationalRetrievalChain.from_llm(
+        #         ChatOpenAI(temperature=0),
+        #         processor.global_index.as_retriever(
+        #             search_kwargs={"user_id": user_id}  # 传入user_id用于权限控制
+        #         ),
+        #         return_source_documents=True
+        #     )
             
-            result = qa_chain({
-                "question": query,
-                "chat_history": chat_history
-            })
+        #     result = qa_chain({
+        #         "question": query,
+        #         "chat_history": chat_history
+        #     })
             
-            response["answer"] = result["answer"]
-        
+        #     response["answer"] = result["answer"]
         return jsonify(response)
         
     except Exception as e:
+        print(e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

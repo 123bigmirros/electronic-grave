@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 public class CanvasVO implements Serializable {
     private long id;
     private String title;
-    private boolean isPublic;
+    private int isPublic;
     private List<ImageBox> images;
     private List<TextBox> texts; 
     private List<Heritage> heritages;
