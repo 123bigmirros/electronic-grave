@@ -154,4 +154,13 @@ public interface CanvasMapper {
      */
     @Select("SELECT * FROM CanvasDTO WHERE id = #{canvasId} AND uId = #{userId}")
     CanvasVO getCanvasBy2Id(Long userId, Long canvasId);
+
+    /**
+     * 获取画布
+     */
+    @Results({
+        @Result(property = "userId", column = "uId")
+    })
+    @Select("SELECT * FROM CanvasDTO WHERE id = #{canvasId}")
+    CanvasVO getCanvasById(Long canvasId);
 }

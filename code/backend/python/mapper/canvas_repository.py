@@ -155,8 +155,8 @@ class CanvasRepository:
             page_content=combined_text,
             metadata={
                 "canvas_id": canvas_id,
-                "user_id": canvas.user_id,
+                "userId": canvas.user_id,
                 "title": canvas.title,
-                "is_public": canvas.is_public
+                "isPublic": canvas.is_public
             }
         )

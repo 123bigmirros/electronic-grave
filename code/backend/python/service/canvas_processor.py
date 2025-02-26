@@ -96,12 +96,13 @@ class CanvasProcessor:
         
         # 获取所有匹配的文档
         docs_with_scores = self.global_index.similarity_search_with_score(query, k=k)
+        print(docs_with_scores)
         # 根据权限过滤文档
         # print(docs_with_scores)
         filtered_docs = []
         for doc, score in docs_with_scores:
             # 如果文档是公开的，或者用户是文档的所有者，则允许访问
-            if doc.metadata.get("is_public", 1) or doc.metadata.get("user_id") == user_id:
+            if doc.metadata.get("isPublic", 1) or doc.metadata.get("userId") == user_id:
                 filtered_docs.append((doc, score))
             
             # 如果已经收集了足够的文档，就停止

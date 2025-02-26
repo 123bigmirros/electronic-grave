@@ -160,10 +160,12 @@ public class CanvasServiceImp implements CanvasService {
 
     @Override
     public CanvasVO getCanvasById(long userId,long canvasId){
-        CanvasVO canvasVO = canvasMapper.getCanvasBy2Id(userId,canvasId);
-        // System.out.println("canvasVO:"+canvasVO);
-        if (canvasVO == null) {
-            return null;
+        CanvasVO canvasVO = null;
+        if(userId != -1){
+            canvasVO = canvasMapper.getCanvasBy2Id(userId,canvasId);
+        }
+        else{
+            canvasVO = canvasMapper.getCanvasById(canvasId);
         }
         // System.out.println(canvasVO.getId());
         canvasVO.setImages(canvasMapper.getImages(canvasId));

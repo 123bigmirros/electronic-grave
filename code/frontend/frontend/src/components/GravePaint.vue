@@ -276,7 +276,7 @@
                 this.canvasId = canvasId;
                 try {
                     const response = await request({
-                        url: `/user/canvas/get/${canvasId}`,
+                        url: `/user/canvas/get/${canvasId}/1`,
                         method: 'get',
                         headers: {
                             "userId": localStorage.getItem('userId')

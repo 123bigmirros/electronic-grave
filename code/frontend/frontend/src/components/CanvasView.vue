@@ -3,6 +3,9 @@
         <!-- 复用 GravePaint 的大部分模板，但移除工具栏和编辑功能 -->
         <div class="canvas">
             <h3>{{ canvasTitle }}</h3>
+            <div class="canvas-actions" v-if="isOwner">
+                <button @click="editCanvas" class="edit-button">修改画布</button>
+            </div>
             <TextTool
                 v-for="(item, index) in canvasItems.texts"
                 :key="'text-' + index"
@@ -58,7 +61,9 @@ export default {
                 images: [],
                 heritages: [],
                 markdowns: []
-            }
+            },
+            canvasUserId: null,
+            isOwner: false
         };
     },
     async mounted() {
@@ -69,7 +74,7 @@ export default {
             const canvasId = this.$route.params.id;
             try {
                 const response = await request({
-                    url: `/user/canvas/get/${canvasId}`,
+                    url: `/user/canvas/get/${canvasId}/0`,
                     method: 'get'
                 });
 
@@ -82,10 +87,22 @@ export default {
                         heritages: canvasData.heritages || [],
                         markdowns: canvasData.markdowns || []
                     };
+                    
+                    // 保存画布创建者ID并检查当前用户是否为创建者
+                    this.canvasUserId = canvasData.userId;
+                    const currentUserId = localStorage.getItem('userId');
+                    this.isOwner = currentUserId && this.canvasUserId && 
+                                  currentUserId.toString() === this.canvasUserId.toString();
                 }
             } catch (error) {
                 console.error('加载画布数据失败:', error);
             }
+        },
+        
+        editCanvas() {
+            // 跳转到编辑页面
+            const canvasId = this.$route.params.id;
+            this.$router.push(`/gravepaint/${canvasId}`);
         }
     }
 };
@@ -104,5 +121,24 @@ export default {
     border-radius: 8px;
     min-height: 600px;
     position: relative;
+}
+
+.canvas-actions {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.edit-button {
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.edit-button:hover {
+    background-color: #45a049;
 }
 </style> 
