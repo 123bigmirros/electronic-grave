@@ -69,7 +69,7 @@
     import ImgTool from './ImgTool';
     import HeritageTool from './HeritageTool';
     import MarkdownTool from './MarkdownTool';
-    import axios from 'axios';
+    import request from '../utils/request'; // 改用自定义的request工具
     import SearchBox from './SearchBox.vue';
 
 
@@ -102,7 +102,7 @@
         methods: {
             // 模拟从后端获取画布数据
             getCanvas() {
-                axios.get('http://localhost:8090/user/canvas/load')
+                request.get('/user/canvas/load')
                     .then(response => {
                         const canvasData = response.data.data;
                         if (canvasData) {

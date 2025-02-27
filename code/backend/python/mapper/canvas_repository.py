@@ -21,7 +21,7 @@ class CanvasRepository:
             # 获取画布基本信息
             cursor.execute("""
                 SELECT c.*
-                FROM canvasDTO c
+                FROM CanvasDTO c
                 WHERE c.id = %s
             """, (canvas_id,))
             canvas_data = cursor.fetchone()
@@ -50,7 +50,7 @@ class CanvasRepository:
 
     def _get_text_boxes(self, cursor, canvas_id) -> List[TextBox]:
         cursor.execute("""
-            SELECT * FROM textbox WHERE pid = %s
+            SELECT * FROM TextBox WHERE pid = %s
         """, (canvas_id,))
         return [TextBox(
             id=row['id'],
@@ -64,7 +64,7 @@ class CanvasRepository:
 
     def _get_image_boxes(self, cursor, canvas_id) -> List[ImageBox]:
         cursor.execute("""
-            SELECT * FROM imagebox WHERE pid = %s
+            SELECT * FROM ImageBox WHERE pid = %s
             
         """, (canvas_id,))
         return [ImageBox(

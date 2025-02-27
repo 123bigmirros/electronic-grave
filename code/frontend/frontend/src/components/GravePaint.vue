@@ -207,7 +207,6 @@
                     alert('请输入画布标题！');
                     return;
                 }
-                alert(this.isPublic)
                 const canvasData = {
                     id: this.canvasId,
                     title: this.canvasTitle,
