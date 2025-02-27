@@ -100,8 +100,8 @@ export default {
             if (!confirm('确定要删除这个画布吗？')) {
                 return;
             }
-            alert
             try {
+                // 删除画布
                 const response = await request({
                     url: `/user/canvas/delete/${canvasId}`,
                     method: 'get',
@@ -111,7 +111,15 @@ export default {
                 });
 
                 if (response.data.code === 1) {
-                    // alert('删除成功');
+                    // 删除对应的embedding
+                    await request({
+                        url: `/api/canvas/delete-embedding/${canvasId}`,
+                        method: 'post',
+                        headers: {
+                            "userId": localStorage.getItem('userId')
+                        }
+                    });
+                    
                     this.getCanvasList(); // 重新获取列表
                 } else {
                     alert('删除失败：' + response.data.msg);
