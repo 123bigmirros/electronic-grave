@@ -49,7 +49,7 @@ def search():
     )
     print(docs_with_scores)
     # 过滤掉相似度低于阈值的结果
-    SIMILARITY_THRESHOLD = 0.5  # 相似度阈值
+    SIMILARITY_THRESHOLD = 0  # 相似度阈值
     filtered_docs = [
         (doc, score) for doc, score in docs_with_scores 
         if score >= SIMILARITY_THRESHOLD
@@ -90,6 +90,23 @@ def search():
     # except Exception as e:
     #     print(e)
     #     return jsonify({"error": str(e)}), 500
+
+@app.route('/api/canvas/delete-embedding/<int:canvas_id>', methods=['POST'])
+def delete_canvas_embedding(canvas_id):
+    try:
+        if not canvas_id:
+            return jsonify({"error": "Missing canvas_id"}), 400
+            
+        success = processor.delete_canvas_embedding(canvas_id)
+        
+        if success:
+            return jsonify({"message": "Canvas embedding deleted successfully"})
+        else:
+            return jsonify({"error": "Canvas embedding not found"}), 404
+            
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='0.0.0.0') 
