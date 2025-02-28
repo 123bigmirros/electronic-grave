@@ -61,6 +61,12 @@
                 </div>
             </div>
         </div>
+
+        <!-- 添加客服组件 -->
+        <CustomerService 
+            :canvas-id="currentIndex >= 0 ? canvasItems[currentIndex]?.id : null"
+            :canvas-data="currentIndex >= 0 ? canvasItems[currentIndex] : null"
+        />
     </div>
 </template>
 
@@ -71,6 +77,7 @@
     import MarkdownTool from './MarkdownTool';
     import request from '../utils/request'; // 改用自定义的request工具
     import SearchBox from './SearchBox.vue';
+    import CustomerService from './CustomerService.vue';
 
 
     export default {
@@ -79,7 +86,8 @@
             ImgTool,
             HeritageTool,
             MarkdownTool,
-            SearchBox
+            SearchBox,
+            CustomerService
         },
         data() {
             return {
@@ -112,7 +120,7 @@
                                 images: item.images?.map(this.convertToPosition) || [],
                                 heritages: item.heritages?.map(this.convertToPosition) || [],
                                 markdowns: item.markdowns?.map(this.convertToPosition) || []
-                            }));
+                            })); 
                         }
                     })
                     .catch(error => {

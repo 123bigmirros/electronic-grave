@@ -35,6 +35,18 @@
                 :readonly="true"
             />
         </div>
+        
+        <!-- 添加客服组件 -->
+        <CustomerService 
+            :canvas-id="$route.params.id"
+            :canvas-data="{
+                texts: canvasItems.texts,
+                images: canvasItems.images,
+                heritages: canvasItems.heritages,
+                markdowns: canvasItems.markdowns,
+                title: canvasTitle
+            }"
+        />
     </div>
 </template>
 
@@ -43,6 +55,7 @@ import TextTool from './TextTool.vue';
 import ImgTool from './ImgTool.vue';
 import HeritageTool from './HeritageTool.vue';
 import MarkdownTool from './MarkdownTool.vue';
+import CustomerService from './CustomerService.vue';
 import request from '../utils/request';
 
 export default {
@@ -51,7 +64,8 @@ export default {
         TextTool,
         ImgTool,
         HeritageTool,
-        MarkdownTool
+        MarkdownTool,
+        CustomerService
     },
     data() {
         return {

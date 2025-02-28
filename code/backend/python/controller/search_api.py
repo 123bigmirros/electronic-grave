@@ -1,14 +1,18 @@
 from flask import Flask, request, jsonify
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from service.canvas_processor import CanvasProcessor
+from service.message_service import MessageService
 import os
 
 app = Flask(__name__)
 CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 processor = CanvasProcessor()
+message_service = MessageService(socketio)
 
 @app.route('/api/canvas/embedding', methods=['POST'])
 def save_embeddings():
@@ -69,27 +73,10 @@ def search():
         ]
     }
     
-    # # 如果需要AI回答，使用ConversationalRetrievalChain
-    # if data.get('need_ai_response', False):
-    #     qa_chain = ConversationalRetrievalChain.from_llm(
-    #         ChatOpenAI(temperature=0),
-    #         processor.global_index.as_retriever(
-    #             search_kwargs={"user_id": user_id}  # 传入user_id用于权限控制
-    #         ),
-    #         return_source_documents=True
-    #     )
-        
-    #     result = qa_chain({
-    #         "question": query,
-    #         "chat_history": chat_history
-    #     })
-        
-    #     response["answer"] = result["answer"]
+   
     return jsonify(response)
         
-    # except Exception as e:
-    #     print(e)
-    #     return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/canvas/delete-embedding/<int:canvas_id>', methods=['POST'])
 def delete_canvas_embedding(canvas_id):
@@ -108,5 +95,19 @@ def delete_canvas_embedding(canvas_id):
         print(e)
         return jsonify({"error": str(e)}), 500
 
+# 添加WebSocket事件处理
+@socketio.on('connect', namespace='/ws/chat')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect', namespace='/ws/chat')
+def handle_disconnect():
+    print('Client disconnected')
+
+@socketio.on('message', namespace='/ws/chat')
+def handle_message(data):
+    response = message_service.handle_message(data)
+    emit('response', response)
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0') 
+    socketio.run(app, debug=True, port=5000, host='0.0.0.0') 

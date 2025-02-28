@@ -6,6 +6,7 @@ import HomePage from '../components/HomePage.vue'
 import LoginRegister from '../components/LoginRegister.vue'
 import PersonalPage from '../components/PersonalPage.vue'
 import TinyStar from '../components/TinyStar.vue'  // 导入新的星星组件
+import CustomerService from '../components/CustomerService.vue'  // 添加导入
 
 const routes = [
     { path: '/gravepaint', component: GravePaint },  // 新建画布路由
@@ -14,6 +15,7 @@ const routes = [
     { path: '/Login',component:LoginRegister},
     { path: '/personal', component: PersonalPage },  // 添加个人主页路由
     { path: '/tinyStar', component: TinyStar },  // 添加星星页面的路由
+    { path: '/customer-service', component: CustomerService },  // 添加客服路由
     {
         path: '/canvas/view/:id',
         name: 'CanvasView',
