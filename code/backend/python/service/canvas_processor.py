@@ -110,3 +110,34 @@ class CanvasProcessor:
                 break
         # print(filtered_docs)
         return filtered_docs 
+
+    def delete_canvas_embedding(self, canvas_id: int) -> bool:
+        """
+        删除指定画布的embedding
+        
+        Args:
+            canvas_id (int): 要删除的画布ID
+            
+        Returns:
+            bool: 删除是否成功
+        """
+        try:
+            if not self.global_index or canvas_id not in self.canvas_doc_mapping:
+                return False
+                
+            # 获取要删除的文档ID
+            old_doc_ids = self.canvas_doc_mapping[canvas_id]
+            
+            # 直接使用文档ID进行删除，而不是Document对象
+            self.global_index.delete(old_doc_ids)
+            
+            # 从映射中删除记录
+            del self.canvas_doc_mapping[canvas_id]
+            
+            # 保存更新后的索引和映射
+            self._save_indices()
+            
+            return True
+        except Exception as e:
+            print(f"删除embedding时出错: {str(e)}")
+            return False 
