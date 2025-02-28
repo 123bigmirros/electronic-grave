@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@kangc/v-md-editor": "^2.3.15",
-    "marked": "^4.3.0"
-  }
-}
