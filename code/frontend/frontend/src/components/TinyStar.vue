@@ -32,24 +32,30 @@ export default {
       this.initStars()
     },
     initStars() {
-      // 创建200颗星星
-      this.stars = Array(200).fill().map(() => ({
+      // 创建300颗星星，增加数量使星空更加密集
+      this.stars = Array(300).fill().map(() => ({
         x: Math.random() * this.canvasWidth,
         y: Math.random() * this.canvasHeight,
-        size: Math.random() * 2 + 1,
+        size: Math.random() * 3 + 0.5, // 更多样的星星大小
         opacity: Math.random(),
-        speed: Math.random() * 0.05 + 0.02
+        speed: Math.random() * 0.05 + 0.02,
+        color: Math.random() > 0.5 ? // 添加一些彩色星星
+          `rgba(255, 255, 255, ` :
+          `rgba(${Math.random() * 50 + 200}, ${Math.random() * 150 + 100}, ${Math.random() * 50 + 200}, `
       }))
     },
     createMeteor() {
-      // 随机创建流星
-      if (Math.random() < 0.03) {
+      // 增加流星出现频率和多样性
+      if (Math.random() < 0.05) {
         const meteor = {
           x: Math.random() * this.canvasWidth,
           y: 0,
-          length: Math.random() * 80 + 100,
-          speed: Math.random() * 15 + 10,
-          angle: Math.PI / 4
+          length: Math.random() * 150 + 100, // 更长的流星尾巴
+          speed: Math.random() * 20 + 15, // 更快的速度
+          angle: Math.PI / 4,
+          color: Math.random() > 0.7 ? // 添加一些彩色流星
+            'rgba(255, 255, 255, ' :
+            `rgba(${Math.random() * 50 + 200}, ${Math.random() * 150 + 100}, ${Math.random() * 50 + 200}, `
         }
         this.meteors.push(meteor)
       }
@@ -60,7 +66,7 @@ export default {
         star.x, star.y, 0,
         star.x, star.y, star.size
       )
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`)
+      gradient.addColorStop(0, star.color + `${star.opacity})`) // 使用星星的颜色
       gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
       ctx.fillStyle = gradient
       ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
@@ -73,7 +79,7 @@ export default {
         meteor.x + Math.cos(meteor.angle) * meteor.length,
         meteor.y + Math.sin(meteor.angle) * meteor.length
       )
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)')
+      gradient.addColorStop(0, meteor.color + '0.7)') // 使用流星的颜色
       gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
       ctx.strokeStyle = gradient
       ctx.lineWidth = 2
