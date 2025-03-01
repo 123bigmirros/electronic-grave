@@ -32,63 +32,84 @@ export default {
       this.initStars()
     },
     initStars() {
-      // 创建300颗星星，增加数量使星空更加密集
-      this.stars = Array(300).fill().map(() => ({
+      // 创建200颗爱心星星
+      this.stars = Array(200).fill().map(() => ({
         x: Math.random() * this.canvasWidth,
         y: Math.random() * this.canvasHeight,
-        size: Math.random() * 3 + 0.5, // 更多样的星星大小
+        size: Math.random() * 2 + 1, // 爱心大小
         opacity: Math.random(),
         speed: Math.random() * 0.05 + 0.02,
-        color: Math.random() > 0.5 ? // 添加一些彩色星星
-          `rgba(255, 255, 255, ` :
-          `rgba(${Math.random() * 50 + 200}, ${Math.random() * 150 + 100}, ${Math.random() * 50 + 200}, `
+        color: Math.random() > 0.5 ? 
+          `rgba(255, 182, 193, ` : // 粉色爱心
+          `rgba(255, 105, 180, ` // 深粉色爱心
       }))
     },
     createMeteor() {
-      // 增加流星出现频率和多样性
-      if (Math.random() < 0.05) {
+      // 增加爱心流星出现频率
+      if (Math.random() < 0.03) {
         const meteor = {
           x: Math.random() * this.canvasWidth,
           y: 0,
-          length: Math.random() * 150 + 100, // 更长的流星尾巴
-          speed: Math.random() * 20 + 15, // 更快的速度
+          length: Math.random() * 100 + 50,
+          speed: Math.random() * 15 + 10,
           angle: Math.PI / 4,
-          color: Math.random() > 0.7 ? // 添加一些彩色流星
-            'rgba(255, 255, 255, ' :
-            `rgba(${Math.random() * 50 + 200}, ${Math.random() * 150 + 100}, ${Math.random() * 50 + 200}, `
+          size: Math.random() * 3 + 2,
+          color: Math.random() > 0.5 ?
+            'rgba(255, 182, 193, ' : // 粉色流星
+            'rgba(255, 105, 180, ' // 深粉色流星
         }
         this.meteors.push(meteor)
       }
     },
     drawStar(ctx, star) {
       ctx.beginPath()
-      const gradient = ctx.createRadialGradient(
-        star.x, star.y, 0,
-        star.x, star.y, star.size
-      )
-      gradient.addColorStop(0, star.color + `${star.opacity})`) // 使用星星的颜色
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+      ctx.save()
+      ctx.translate(star.x, star.y)
+      ctx.scale(star.size, star.size)
+      
+      // 绘制爱心
+      ctx.moveTo(0, 0)
+      ctx.bezierCurveTo(-2, -2, -4, 2, 0, 4)
+      ctx.bezierCurveTo(4, 2, 2, -2, 0, 0)
+      
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 4)
+      gradient.addColorStop(0, star.color + `${star.opacity})`)
+      gradient.addColorStop(1, 'rgba(255, 192, 203, 0)')
+      
       ctx.fillStyle = gradient
-      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
       ctx.fill()
+      ctx.restore()
     },
     drawMeteor(ctx, meteor) {
+      ctx.save()
+      // 绘制流星轨迹
       ctx.beginPath()
       const gradient = ctx.createLinearGradient(
         meteor.x, meteor.y,
         meteor.x + Math.cos(meteor.angle) * meteor.length,
         meteor.y + Math.sin(meteor.angle) * meteor.length
       )
-      gradient.addColorStop(0, meteor.color + '0.7)') // 使用流星的颜色
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+      gradient.addColorStop(0, meteor.color + '0.8)')
+      gradient.addColorStop(1, 'rgba(255, 192, 203, 0)')
       ctx.strokeStyle = gradient
-      ctx.lineWidth = 2
+      ctx.lineWidth = 1
       ctx.moveTo(meteor.x, meteor.y)
       ctx.lineTo(
         meteor.x + Math.cos(meteor.angle) * meteor.length,
         meteor.y + Math.sin(meteor.angle) * meteor.length
       )
       ctx.stroke()
+
+      // 在流星头部绘制爱心
+      ctx.translate(meteor.x, meteor.y)
+      ctx.scale(meteor.size, meteor.size)
+      ctx.beginPath()
+      ctx.moveTo(0, 0)
+      ctx.bezierCurveTo(-2, -2, -4, 2, 0, 4)
+      ctx.bezierCurveTo(4, 2, 2, -2, 0, 0)
+      ctx.fillStyle = meteor.color + '1)'
+      ctx.fill()
+      ctx.restore()
     },
     updateStars() {
       this.stars.forEach(star => {
@@ -106,15 +127,15 @@ export default {
       const canvas = this.$refs.starCanvas
       const ctx = canvas.getContext('2d')
       
-      // 清空画布
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+      // 使用深色背景，让爱心更突出
+      ctx.fillStyle = 'rgba(25, 25, 50, 0.1)'
       ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
       
-      // 更新和绘制星星
+      // 更新和绘制爱心星星
       this.updateStars()
       this.stars.forEach(star => this.drawStar(ctx, star))
       
-      // 创建和更新流星
+      // 创建和更新爱心流星
       this.createMeteor()
       this.updateMeteors()
       this.meteors.forEach(meteor => this.drawMeteor(ctx, meteor))
