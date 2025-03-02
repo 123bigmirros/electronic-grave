@@ -5,7 +5,7 @@ import axios from 'axios';
 axios.defaults.headers.common['Accept'] = 'application/json';
 // 创建 axios 实例
 const request = axios.create({
-    baseURL: 'http://localhost:8090',
+    baseURL: 'http://101.132.43.211:8090',
     timeout: 5000,
     headers: {
         'Content-Type': 'application/json'

@@ -72,8 +72,8 @@ export default {
         }
 
         const url = this.isLogin 
-          ? 'http://localhost:8090/user/info/login' 
-          : 'http://localhost:8090/user/info/register'
+          ? 'http://101.132.43.211:8090/user/info/login' 
+          : 'http://101.132.43.211:8090/user/info/register'
 
         const response = await axios.post(url, {
           username: this.formData.username,
