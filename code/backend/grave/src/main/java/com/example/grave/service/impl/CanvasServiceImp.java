@@ -2,8 +2,18 @@ package com.example.grave.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import com.example.grave.common.context.BaseContext;
@@ -16,13 +26,25 @@ import com.example.grave.pojo.entity.MarkdownBox;
 import com.example.grave.pojo.entity.TextBox;
 import com.example.grave.pojo.vo.CanvasVO;
 import com.example.grave.service.CanvasService;
+import com.example.grave.pojo.entity.HeritageRequest;
 
 @Service
 public class CanvasServiceImp implements CanvasService {
     @Autowired
     private CanvasMapper canvasMapper;
 
+    @Autowired
+    private KafkaTemplate<String, HeritageRequest> kafkaTemplate;
     
+    @Value("${kafka.topics.heritage-requests}")
+    private String heritageRequestsTopic;
+    
+    // 使用ConcurrentMap存储处理中的请求结果
+    private ConcurrentMap<String, HeritageItem> requestResults = new ConcurrentHashMap<>();
+
+    // 存储进行中的请求和对应的CompletableFuture
+    private ConcurrentMap<String, CompletableFuture<HeritageItem>> pendingRequests = new ConcurrentHashMap<>();
+
     public void saveCanvas(CanvasDTO canvasDTO,boolean justContent) {
         // 保存画布主信息并获取生成的ID
         if(!justContent){
@@ -95,47 +117,82 @@ public class CanvasServiceImp implements CanvasService {
     public List<HeritageItem> getNonePrivateHeritage(Long heritageId) {
         // 获取所有遗产项
         List<HeritageItem> allItems = canvasMapper.getAllHeritageItemsByHeritageId(heritageId);
-        
+        long userId = BaseContext.getCurrentId();
         // 返回所有非私密的遗产项，以及已经被当前用户获得的私密遗产项
         return allItems.stream()
                 .filter(item -> !item.getIsPrivate() || 
-                        (item.getIsPrivate() && item.getUserId() != 0))
+                        (item.getIsPrivate() && item.getUserId() == userId))
                 .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
-    public synchronized HeritageItem getPrivateHeritage(Long heritageId) {
-        // 1. 获取指定heritageId下所有未被获得的私密遗产项
-        List<HeritageItem> items = canvasMapper.getUnclaimedPrivateHeritageItems(heritageId);
-        if (items == null || items.isEmpty()) {
-            return null;
-        }
-
-        // 2. 随机选择一个遗产项
-        int randomIndex = (int) (Math.random() * items.size());
-        HeritageItem selectedItem = items.get(randomIndex);
-
-        // 3. 随机决定是否能获得遗产（模拟"有缘"）
-        if (Math.random() < 0.5) { // 50%的概率获得遗产
-            // 4. 设置用户ID（这里暂时使用固定值1，实际应该从session获取）
-            Long currentUserId = BaseContext.getCurrentId(); // TODO: 从session获取当前用户ID
-            selectedItem.setUserId(currentUserId);
-
-            // 5. 更新数据库
-            try {
-                boolean updated = canvasMapper.updateHeritageItemOwner(selectedItem);
-                if (updated) {
-                    return selectedItem;  // 更新成功，返回获得的遗产项
-                }
-            } catch (Exception e) {
-                // 处理并发更新异常
-                return null;
+    public CompletableFuture<HeritageItem> getPrivateHeritageAsync(Long heritageId) {
+        // 获取当前用户ID
+        Long currentUserId = BaseContext.getCurrentId();
+        
+        // 创建请求唯一标识
+        String requestId = currentUserId + "-" + heritageId + "-" + System.currentTimeMillis();
+        
+        // 创建请求对象
+        HeritageRequest request = new HeritageRequest(heritageId, currentUserId);
+        
+        // 创建CompletableFuture
+        CompletableFuture<HeritageItem> future = new CompletableFuture<>();
+        
+        // 存储未完成的请求
+        pendingRequests.put(requestId, future);
+        
+        // 发送请求到Kafka
+        kafkaTemplate.send(heritageRequestsTopic, requestId, request);
+        
+        // 设置超时处理
+        CompletableFuture.delayedExecutor(3, TimeUnit.SECONDS).execute(() -> {
+            if (!future.isDone()) {
+                pendingRequests.remove(requestId);
+                future.complete(null); // 超时返回null
             }
-        }
-
-        return null;  // 未抽中或更新失败
+        });
+        
+        return future;
     }
 
+    @KafkaListener(topics = "${kafka.topics.heritage-requests}", groupId = "${spring.kafka.consumer.group-id}")
+    public void processHeritageRequest(@Header(KafkaHeaders.RECEIVED_KEY) String key, 
+                                     @Payload HeritageRequest request) {
+        // 处理请求
+        HeritageItem result = null;
+        
+        // 获取指定heritageId下所有未被获得的私密遗产项
+        List<HeritageItem> items = canvasMapper.getUnclaimedPrivateHeritageItems(request.getHeritageId());
+        if (items != null && !items.isEmpty()) {
+            // 随机选择一个遗产项
+            int randomIndex = (int) (Math.random() * items.size());
+            HeritageItem selectedItem = items.get(randomIndex);
+            
+            // 随机决定是否能获得遗产（模拟"有缘"）
+            if (Math.random() < 0.5) { // 50%的概率获得遗产
+                // 设置用户ID
+                selectedItem.setUserId(request.getUserId());
+                
+                // 更新数据库
+                try {
+                    boolean updated = canvasMapper.updateHeritageItemOwner(selectedItem);
+                    if (updated) {
+                        result = selectedItem;  // 更新成功，返回获得的遗产项
+                    }
+                } catch (Exception e) {
+                    // 处理并发更新异常
+                    result = null;
+                }
+            }
+        }
+        
+        // 完成对应的CompletableFuture
+        CompletableFuture<HeritageItem> future = pendingRequests.remove(key);
+        if (future != null) {
+            future.complete(result);
+        }
+    }
 
     @Override
     public List<CanvasVO> getCanvasList(Long userId) {

@@ -2,6 +2,7 @@ package com.example.grave.controller.user;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -27,7 +28,7 @@ import com.example.grave.pojo.entity.HeritageItem;
 
 
 
-// @CrossOrigin(origins = "http://localhost:8080")
+@CrossOrigin(origins = "http://localhost:1024")
 @RestController
 @RequestMapping("/user/canvas")
 public class CanvasController {
@@ -70,7 +71,11 @@ public class CanvasController {
      */
     @GetMapping("/heritage/NonePrivateHeritage")
     public Result<List<HeritageItem>> getNonePrivateHeritage(Long heritageId) {
+        
         List<HeritageItem> heritageItems = canvasService.getNonePrivateHeritage(heritageId);
+        for(HeritageItem item:heritageItems){
+            System.out.println(item.getContent());
+        }
         return Result.success(heritageItems);
     }
 
@@ -78,9 +83,18 @@ public class CanvasController {
      * 尝试获取私密遗产内容
      */
     @PostMapping("/heritage/getheritage")
-    public Result<HeritageItem> getPrivateHeritage(@RequestBody HeritageItem request) {
-        HeritageItem heritageItem = canvasService.getPrivateHeritage(request.getHeritageId());
-        return Result.success(heritageItem);
+    public CompletableFuture<Result<HeritageItem>> getPrivateHeritage(@RequestParam("heritageId") Long heritageId) {
+        long userId = BaseContext.getCurrentId();
+        if(userId == -1){
+            return CompletableFuture.completedFuture(Result.error("用户未登录"));
+        }
+        return canvasService.getPrivateHeritageAsync(heritageId)
+            .thenApply(heritageItem -> {
+                if (heritageItem == null) {
+                    return Result.error("很遗憾，您与这份遗产无缘");
+                }
+                return Result.success(heritageItem);
+            });
     }
 
     @PostMapping("/list")
@@ -110,19 +124,13 @@ public class CanvasController {
         else if(needUserId == 0){
             userId = -1;
         }
-        System.out.println("userId:"+userId);
         CanvasVO canvasVO = canvasService.getCanvasById(userId, canvasId);
-        for(MarkdownBox markdown:canvasVO.getMarkdowns()){
-            System.out.println(markdown.getId());
-        }
-        for(TextBox textBox:canvasVO.getTexts()){
-            System.out.println(textBox.getId());
-        }
-        for(ImageBox imageBox:canvasVO.getImages()){
-            System.out.println(imageBox.getId());
-        }
+        
         for(Heritage heritage:canvasVO.getHeritages()){
             System.out.println(heritage.getId());
+            for(HeritageItem item:heritage.getItems()){
+                System.out.println(item.getContent());
+            }
         }
         return Result.success(canvasVO);
     }

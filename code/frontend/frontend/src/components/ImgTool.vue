@@ -5,10 +5,13 @@
       left: position.left + 'px',
       top: position.top + 'px',
       width: position.width + 'px',
-      height: position.height + 'px'
+      height: position.height + 'px',
+      zIndex: position.zIndex || 'auto'
     }"
     @mousedown="startDrag"
     @keydown.backspace="deleteComponent"
+    @dragover.prevent="handleDragOver"
+    @drop.prevent="handleDrop"
     tabindex="0"
   >
     <div class="resize-handle top-left" @mousedown.stop="startResize('top-left')"></div>
@@ -21,7 +24,7 @@
       :src="imageUrl"
       alt="Image"
       class="img-content"
-      @click="editImage"
+      @click="openImageSelector"
     />
     <input
       v-if="isEditing"
@@ -30,10 +33,19 @@
       class="img-input"
       @blur="onBlur"
     />
+    <input
+      type="file"
+      ref="fileInput"
+      accept="image/*"
+      @change="handleFileSelect"
+      style="display: none;"
+    />
   </div>
 </template>
 
 <script>
+import request from '@/utils/request';
+
 export default {
   props: {
     // 传入的初始图片 URL 和位置、大小等信息
@@ -65,6 +77,7 @@ export default {
       initialHeight: 0,
       initialLeft: 0,
       initialTop: 0,
+      isUploading: false,
     };
   },
   methods: {
@@ -100,6 +113,75 @@ export default {
           inputElement.focus();
         }
       });
+    },
+
+    // 打开图片选择器
+    openImageSelector() {
+      // 如果点击图片，打开文件选择器
+      this.$refs.fileInput.click();
+    },
+    
+    // 处理文件选择
+    handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        this.uploadImage(file);
+      }
+    },
+    
+    // 处理拖拽
+    handleDragOver(event) {
+      event.preventDefault();
+      this.$el.classList.add('drag-over');
+    },
+    
+    // 处理文件放置
+    handleDrop(event) {
+      event.preventDefault();
+      this.$el.classList.remove('drag-over');
+      const file = event.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        this.uploadImage(file);
+      }
+    },
+    
+    // 上传图片到服务器
+    async uploadImage(file) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        this.isUploading = true;
+        
+        const response = await request({
+          url: '/api/upload/image',
+          method: 'POST',
+          data: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json'
+          }
+        });
+        
+        const data = response.data;
+        
+        
+        // 这里直接使用data.data，因为后端返回的是字符串而不是对象
+        const imageUrl = data.data.path;
+        this.imageUrl = 'http://localhost:8090' + imageUrl;
+       
+        
+        
+        
+        this.$emit('updateImage', this.imageUrl);
+        
+      } catch (error) {
+        console.error('图片上传错误:', error);
+        alert('图片上传失败: ' + error.message);
+      } finally {
+        this.isUploading = false;
+        this.$refs.fileInput.value = '';
+      }
     },
 
     // 图片编辑框失去焦点时
@@ -182,7 +264,7 @@ export default {
 .canvas-item.img-tool {
   position: absolute;
   padding: 5px;
-  background-color: lightgreen;
+  background-color: transparent;
   border: 1px solid #ddd;
   cursor: move;
   border-radius: 5px;
@@ -191,9 +273,10 @@ export default {
 .img-content {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 5px;
   cursor: pointer;
+  z-index: 1;
 }
 
 .img-input {
@@ -211,38 +294,52 @@ export default {
 
 .resize-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: white;
-  border: 1px solid #666;
+  width: 14px;
+  height: 14px;
+  background-color: transparent;
+  border: 1px solid #4f8cff;
   border-radius: 50%;
+  z-index: 10;
+  /* 默认隐藏控制点 */
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 鼠标悬停时显示控制点 */
+.canvas-item.img-tool:hover .resize-handle {
+  opacity: 1;
 }
 
 .top-left {
-  top: -5px;
-  left: -5px;
+  top: -7px;
+  left: -7px;
   cursor: nw-resize;
 }
 
 .top-right {
-  top: -5px;
-  right: -5px;
+  top: -7px;
+  right: -7px;
   cursor: ne-resize;
 }
 
 .bottom-left {
-  bottom: -5px;
-  left: -5px;
+  bottom: -7px;
+  left: -7px;
   cursor: sw-resize;
 }
 
 .bottom-right {
-  bottom: -5px;
-  right: -5px;
+  bottom: -7px;
+  right: -7px;
   cursor: se-resize;
 }
 
 .canvas-item {
   outline: none;
+}
+
+.drag-over {
+  border: 2px dashed #4f8cff;
+  background-color: rgba(79, 140, 255, 0.1);
 }
 </style>

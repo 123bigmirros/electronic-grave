@@ -50,6 +50,9 @@
                     v-for="(item, index) in canvasItems.heritages"
                     :key="'heritage-' + index"
                     :initialPosition="item.position"
+                    :initialPublicTime="item.publicTime"
+                    :initialHeritageItems="item.items || []"
+                    :heritageId="item.id"
                     @updatePosition="updateHeritagePosition(index, $event)"
                     @configureHeritage="configureHeritage(index, $event)"
                     @updateContent="updateHeritageContent(index, $event)"
@@ -119,7 +122,8 @@
                 showSaveDialog: false,
                 canvasTitle: '',
                 isPublic: true,
-                canvasId: null  // 新增：存储画布ID
+                canvasId: null,  // 新增：存储画布ID
+                currentZIndex: 1  // 添加一个跟踪当前z-index的计数器
             };
         },
         methods: {
@@ -128,10 +132,11 @@
                 const newText = {
                     content: '这是一个文本框',
                     position: {
-                        left: 100,
+                        left: 350,
                         top: 100,
                         width: 200,
-                        height: 50
+                        height: 50,
+                        zIndex: ++this.currentZIndex  // 增加并分配新的z-index
                     }
                 };
                 this.canvasItems.texts.push(newText);
@@ -140,10 +145,11 @@
                 const newImage = {
                     imageUrl: 'https://via.placeholder.com/150',
                     position: {
-                        left: 100,
+                        left: 350,
                         top: 100,
                         width: 150,
-                        height: 150
+                        height: 150,
+                        zIndex: ++this.currentZIndex  // 增加并分配新的z-index
                     }
                 };
                 this.canvasItems.images.push(newImage);
@@ -151,12 +157,13 @@
             addHeritageTool() {
                 const newHeritage = {
                     position: {
-                        left: 100,
+                        left: 350,
                         top: 100,
                         width: 300,
-                        height: 200
+                        height: 200,
+                        zIndex: ++this.currentZIndex  // 增加并分配新的z-index
                     },
-                    publicTime: null,
+                    publicTime: '',
                     items: []
                 };
                 this.canvasItems.heritages.push(newHeritage);
@@ -165,10 +172,11 @@
                 const newMarkdown = {
                     content: '# 新建Markdown\n请输入内容',
                     position: {
-                        left: 100,
+                        left: 350,
                         top: 100,
                         width: 400,
-                        height: 300
+                        height: 300,
+                        zIndex: ++this.currentZIndex  // 增加并分配新的z-index
                     }
                 };
                 this.canvasItems.markdowns.push(newMarkdown);
@@ -286,7 +294,8 @@
                         const canvasData = response.data.data;
                         // 更新画布标题和公开状态
                         this.canvasTitle = canvasData.title;
-                        this.isPublic = canvasData.isPublic;
+                        // alert(canvasData.isPublic);
+                        this.isPublic = canvasData.isPublic==1?true:false;
                         
                         // 确保每个数组都有默认值，防止后端返回null
                         this.canvasItems = {
@@ -318,7 +327,8 @@
                                     height: heritage.height
                                 },
                                 publicTime: heritage.publicTime,
-                                items: heritage.items || []
+                                items: heritage.items || [],
+                                id: heritage.id
                             })) || [],
                             
                             markdowns: canvasData.markdowns?.map(markdown => ({

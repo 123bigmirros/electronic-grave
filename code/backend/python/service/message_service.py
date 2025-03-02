@@ -1,10 +1,5 @@
 from flask_socketio import SocketIO, emit
 from langchain.chat_models import ChatOpenAI
-from langchain.chains import ConversationalRetrievalChain
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.schema import Document
-import json
 import os
 
 class MessageService:
@@ -18,16 +13,7 @@ class MessageService:
         # 设置OpenAI API
         os.environ["OPENAI_API_BASE"] = "https://api.chatanywhere.tech/v1"
         os.environ["OPENAI_API_KEY"] = "sk-X6qmvKSqTxaeFIrmq9v2KlAN6QJEKwxi6eGX5ads7wYERbx0"
-        
-        # 初始化embeddings和模型
-        self.embeddings = OpenAIEmbeddings()
         self.llm = ChatOpenAI(temperature=0)
-        
-    def load_canvas_data(self, canvas_id):
-        # 这里需要实现从数据库加载画布数据并创建向量存储
-        # 示例代码，需要根据实际情况修改
-        docs = []  # 从数据库加载的文档
-        return FAISS.from_documents(docs, self.embeddings)
         
     def handle_message(self, data):
         message_type = data.get('type')
@@ -48,59 +34,50 @@ class MessageService:
             
             if not session_id in self.chat_histories:
                 self.chat_histories[session_id] = []
-                
-            # 使用画布数据创建向量存储
-            vectorstore = self.create_vectorstore_from_canvas(canvas_info.get('canvas_data', {}))
             
-            # 创建对话链
-            qa_chain = ConversationalRetrievalChain.from_llm(
-                self.llm,
-                vectorstore.as_retriever(),
-                return_source_documents=True
-            )
+            # 构建画布内容文本
+            canvas_content = self.format_canvas_content(canvas_info.get('canvas_data', {}))
+            
+            # 构建 prompt
+            prompt = f"""
+            基于以下画布内容回答用户问题。如果问题与画布内容无关，请告知用户。
+
+            画布内容：
+            {canvas_content}
+
+            用户问题：{message}
+            """
             
             # 获取回答
-            result = qa_chain({
-                "question": message,
-                "chat_history": self.chat_histories[session_id]
-            })
+            response = self.llm.predict(prompt)
             
             # 更新聊天历史
-            self.chat_histories[session_id].append((message, result["answer"]))
+            self.chat_histories[session_id].append((message, response))
             
-            return {
-                "answer": result["answer"],
-                "sources": [doc.metadata.get("source") for doc in result["source_documents"]]
-            }
-            
-    def create_vectorstore_from_canvas(self, canvas_data):
-        # 将画布数据转换为文档格式
-        docs = []
+            return {"answer": response}
+    
+    def format_canvas_content(self, canvas_data):
+        """将画布数据格式化为文本"""
+        content_parts = []
         
         if canvas_data.get('title'):
-            docs.append(Document(
-                page_content=f"Title: {canvas_data['title']}",
-                metadata={"type": "title"}
-            ))
-            
-        for text in canvas_data.get('texts', []):
-            docs.append(Document(
-                page_content=text.get('content', ''),
-                metadata={"type": "text"}
-            ))
-            
-        for markdown in canvas_data.get('markdowns', []):
-            docs.append(Document(
-                page_content=markdown.get('content', ''),
-                metadata={"type": "markdown"}
-            ))
-            
-        for heritage in canvas_data.get('heritages', []):
-            if heritage.get('items'):
-                for item in heritage['items']:
-                    docs.append(Document(
-                        page_content=item.get('content', ''),
-                        metadata={"type": "heritage"}
-                    ))
+            content_parts.append(f"标题：{canvas_data['title']}\n")
         
-        return FAISS.from_documents(docs, self.embeddings)
+        if canvas_data.get('texts'):
+            content_parts.append("文本内容：")
+            for text in canvas_data['texts']:
+                content_parts.append(text.get('content', ''))
+        
+        if canvas_data.get('markdowns'):
+            content_parts.append("\nMarkdown内容：")
+            for markdown in canvas_data['markdowns']:
+                content_parts.append(markdown.get('content', ''))
+        
+        if canvas_data.get('heritages'):
+            content_parts.append("\n传承内容：")
+            for heritage in canvas_data['heritages']:
+                if heritage.get('items'):
+                    for item in heritage['items']:
+                        content_parts.append(item.get('content', ''))
+        
+        return "\n".join(content_parts)

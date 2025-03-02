@@ -6,14 +6,17 @@
                     <input 
                         type="text" 
                         v-model="searchQuery" 
-                        placeholder="搜索..." 
-                        @input="handleSearch"
+                        placeholder="搜索..."
                     >
                     <button class="nav-button" @click="handleSearch">搜索</button>
                 </div>
                 
                 <!-- 搜索结果展示 -->
-                <div v-if="searchResults.length > 0" class="search-results">
+                <div 
+                    v-if="searchResults.length > 0" 
+                    class="search-results"
+                    v-click-outside="closeSearchResults"
+                >
                     <div 
                         v-for="result in searchResults" 
                         :key="result.canvas_id" 
@@ -39,6 +42,21 @@ import request_py from '../utils/requests_py';
 
 export default {
     name: 'SearchBox',
+    directives: {
+        'click-outside': {
+            mounted(el, binding) {
+                el._clickOutside = (event) => {
+                    if (!(el === event.target || el.contains(event.target))) {
+                        binding.value(event);
+                    }
+                };
+                document.addEventListener('click', el._clickOutside);
+            },
+            unmounted(el) {
+                document.removeEventListener('click', el._clickOutside);
+            },
+        },
+    },
     data() {
         return {
             searchQuery: '',
@@ -92,6 +110,9 @@ export default {
         goToCreate() {
             console.log('尝试跳转到 gravepaint 页面');
             this.$router.push('/gravepaint');
+        },
+        closeSearchResults() {
+            this.searchResults = [];
         }
     }
 }

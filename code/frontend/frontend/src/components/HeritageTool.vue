@@ -79,8 +79,14 @@
                         <span class="visibility-badge">所有人可见</span>
                     </div>
                     
-                    <!-- 私密内容 -->
-                    <div v-if="hasPrivateItems" class="heritage-item private-item">
+                    <!-- 已获得的私密内容 -->
+                    <div v-if="receivedPrivateItem" class="heritage-item private-item received">
+                        {{ receivedPrivateItem.content }}
+                        <span class="visibility-badge special">有缘者得</span>
+                    </div>
+                    
+                    <!-- 争抢按钮移到最下方 - 如果没有收到私密内容则显示 -->
+                    <div v-if="!receivedPrivateItem" class="heritage-item private-item request-container">
                         <button 
                             class="request-btn"
                             @click="requestPrivateContent"
@@ -112,15 +118,27 @@ export default {
         isEditMode: {
             type: Boolean,
             default: true
+        },
+        initialPublicTime: {
+            type: String,
+            default: ''
+        },
+        initialHeritageItems: {
+            type: Array,
+            default: () => []
+        },
+        heritageId: {
+            type: String,
+            default: null
         }
     },
     data() {
         return {
             position: { ...this.initialPosition },
-            isConfigured: false,
+            isConfigured: this.initialPublicTime !== '' || this.initialHeritageItems.length > 0,
             isEditing: false,
-            publicTime: '',
-            heritageItems: [],
+            publicTime: this.initialPublicTime || '',
+            heritageItems: [...this.initialHeritageItems],
             newItemContent: '',
             newItemIsPrivate: false,
             dragging: false,
@@ -132,18 +150,19 @@ export default {
             nonePrivateItems: [],
             hasPrivateItems: false,
             isRequesting: false,
-            heritageId: null,
             resizing: false,
             resizeHandle: null,
             initialWidth: 0,
             initialHeight: 0,
             initialLeft: 0,
             initialTop: 0,
+            receivedPrivateItem: null,
+            contentLoaded: false
         };
     },
     computed: {
         isTimeToShow() {
-            return this.currentTime >= new Date(this.publicTime);
+            return this.publicTime && this.currentTime >= new Date(this.publicTime);
         },
         countdownText() {
             if (this.remainingTime <= 0) return '已公开';
@@ -165,9 +184,7 @@ export default {
     methods: {
         formatDate(date) {
             const dateObj = new Date(date);
-            if (dateObj.getFullYear() === 1970) {
-                return '未设置';
-            }
+            
             return dateObj.toLocaleString();
         },
         confirmConfig() {
@@ -209,6 +226,7 @@ export default {
                 return;
             }
             this.dragging = true;
+            
             this.offsetX = event.clientX - this.position.left;
             this.offsetY = event.clientY - this.position.top;
             window.addEventListener('mousemove', this.onDrag);
@@ -231,6 +249,11 @@ export default {
             const targetTime = new Date(this.publicTime).getTime();
             const now = this.currentTime.getTime();
             this.remainingTime = Math.max(0, Math.floor((targetTime - now) / 1000));
+            
+            if (this.remainingTime === 0 && !this.contentLoaded && !this.isEditMode) {
+                this.contentLoaded = true;
+                // this.loadContent();
+            }
         },
         startCountdown() {
             this.updateCountdown();
@@ -239,49 +262,60 @@ export default {
                 clearInterval(this.countdown);
             }
             
-            if (!this.isTimeToShow) {
-                this.countdown = setInterval(() => {
-                    this.updateCountdown();
-                    
-                    if (this.isTimeToShow) {
-                        clearInterval(this.countdown);
-                        // 到达公开时间后获取内容
-                        this.fetchNonePrivateContent();
+            this.countdown = setInterval(() => {
+                this.updateCountdown();
+            }, 1000);
+        },
+        async loadContent() {
+            
+            if (!this.heritageId) return;
+            
+            try {
+                // 获取所有公开内容和用户已获得的私密内容
+                const response = await request.get('/user/canvas/heritage/NonePrivateHeritage', {
+                    params: {
+                        heritageId: this.heritageId
                     }
-                }, 1000);
-            } else {
-                // 如果已经到达公开时间，直接获取内容
-                this.fetchNonePrivateContent();
-            }
-        },
-        async fetchNonePrivateContent() {
-            try {
-                const response = await request.get('/canvas/heritage/NonePrivateHeritage');
-                if (response.data.success) {
-                    this.nonePrivateItems = response.data.data || [];
-                    this.hasPrivateItems = response.data.data.some(item => item.isPrivate);
-                }
-            } catch (error) {
-                console.error('获取公开内容失败:', error);
-            }
-        },
-        async requestPrivateContent() {
-            this.isRequesting = true;
-            try {
-                const response = await request.post('/canvas/heritage/getheritage', {
-                    heritageId: this.heritageId
                 });
-                if (response.data.success) {
-                    await this.fetchNonePrivateContent();
-                } else {
-                    alert('很遗憾，您与这份遗产无缘');
-                }
+                // alert(JSON.stringify(response.data))
+                console.log('获取到的公开内容:', response.data);
+                
+                this.nonePrivateItems = response.data.data || [];
+                
+                
             } catch (error) {
-                console.error('请求私密内容失败:', error);
-                alert('请求失败，请稍后重试');
-            } finally {
-                this.isRequesting = false;
+                console.error('加载内容失败:', error);
             }
+        },
+        requestPrivateContent() {
+            if (this.isRequesting || !this.heritageId) return;
+            
+            this.isRequesting = true;
+            
+            // 修改为使用URL参数方式发送请求
+            request({
+                method: 'post',
+                url: '/user/canvas/heritage/getheritage',
+                params: { heritageId: this.heritageId } // 使用params将参数作为URL查询参数发送
+            })
+            .then(response => {
+                console.log("争抢请求响应:", response);
+                if (response.data.code === 1 && response.data.data) {
+                    // 争抢成功
+                    this.receivedPrivateItem = response.data.data;
+                    alert('恭喜您获得了有缘内容！');
+                } else {
+                    // 争抢失败或没有私密内容
+                    alert(response.data.msg || '很遗憾，您与这份遗产无缘');
+                }
+            })
+            .catch(error => {
+                console.error('请求私密内容失败:', error);
+                alert('请求失败，请稍后再试');
+            })
+            .finally(() => {
+                this.isRequesting = false;
+            });
         },
         startResize(handle) {
             this.resizing = true;
@@ -344,7 +378,7 @@ export default {
             window.removeEventListener('mouseup', this.stopResize);
         },
         deleteComponent() {
-            if (!this.isEditing && !this.isConfigured) {  // 只在非编辑状态且未配置时允许删除
+            if (!this.isEditing) {
                 this.$emit('delete');
             }
         }
@@ -358,18 +392,30 @@ export default {
             },
             immediate: true
         },
-        isTimeToShow: {
-            handler(newVal) {
-                if (newVal) {
-                    this.fetchNonePrivateContent();
-                }
-            },
-            immediate: true
-        }
     },
     mounted() {
+        if (this.initialPublicTime || this.initialHeritageItems.length > 0) {
+            this.isConfigured = true;
+            if (!this.publicTime && this.initialHeritageItems.length > 0) {
+                this.publicTime = '1970-01-01T00:00:00';
+            }
+        }
+        
         if (this.publicTime) {
             this.startCountdown();
+        }
+
+        if (this.isConfigured && this.heritageItems.length > 0) {
+            this.$emit('updateContent', {
+                publicTime: this.publicTime,
+                items: this.heritageItems
+            });
+        }
+
+        // 如果在显示模式且已到公开时间，则加载内容
+        if (!this.isEditMode && this.isTimeToShow) {
+            this.contentLoaded = true;
+            this.loadContent();
         }
     },
     beforeUnmount() {
@@ -578,8 +624,17 @@ button:hover {
     width: 10px;
     height: 10px;
     background-color: white;
-    border: 1px solid #666;
+    border: 1px solid #4f8cff;
     border-radius: 50%;
+    z-index: 10;
+    /* 默认隐藏控制点 */
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* 鼠标悬停时显示控制点 */
+.canvas-item.heritage-tool:hover .resize-handle {
+    opacity: 1;
 }
 
 .top-left {
@@ -608,5 +663,15 @@ button:hover {
 
 .canvas-item {
     outline: none;
+}
+
+.received {
+    background-color: #f0fff0;
+    border: 1px solid #4CAF50;
+}
+
+.special {
+    background-color: #4CAF50;
+    color: white;
 }
 </style> 

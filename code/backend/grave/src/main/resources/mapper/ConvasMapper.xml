@@ -43,13 +43,14 @@
 </insert>
 
 <insert id="insertHeritageItems" parameterType="com.example.grave.pojo.entity.Heritage">
-    <foreach collection="items" item="item" separator=";">
-        INSERT INTO heritage_item (
-            heritage_id,
-            content,
-            is_private
-        )
-        VALUES (
+    INSERT INTO heritage_item (
+        heritage_id,
+        content,
+        is_private
+    )
+    VALUES 
+    <foreach collection="items" item="item" separator=",">
+        (
             #{id},
             #{item.content},
             #{item.isPrivate}

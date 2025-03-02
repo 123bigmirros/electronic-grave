@@ -1,6 +1,7 @@
 package com.example.grave.service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import com.example.grave.pojo.dto.CanvasDTO;
 import com.example.grave.pojo.vo.CanvasVO;
@@ -20,7 +21,7 @@ public interface CanvasService {
     /**
      * 获取私密遗产内容
      */
-    HeritageItem getPrivateHeritage(Long heritageId);
+    CompletableFuture<HeritageItem> getPrivateHeritageAsync(Long heritageId);
 
     /**
      * 获取用户画布列表

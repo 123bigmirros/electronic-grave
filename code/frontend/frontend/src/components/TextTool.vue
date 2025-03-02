@@ -5,7 +5,8 @@
                     left: position.left + 'px',
                     top: position.top + 'px',
                     width: position.width + 'px',
-                    height: position.height + 'px'
+                    height: position.height + 'px',
+                    zIndex: position.zIndex || 'auto'  // 应用z-index
                     }"
             @mousedown="startDrag"
             @keydown.backspace="deleteComponent"
@@ -28,12 +29,11 @@
                             }"
                     @blur="onBlur"
                     @input="onInput"
+                    @keydown="handleKeydown"
+                    ref="editableContent"
                     >
-                    {{ content }}
             </div>
-                <div v-else @click="editText" class="text-display">
-                    {{ content || '点击编辑' }}
-                </div>
+                <div v-else @click="editText" class="text-display" v-html="formattedContent"></div>
     </div>
 </template>
 
@@ -72,6 +72,13 @@
                 initialTop: 0,
             };
         },
+        computed: {
+            // 格式化内容，将换行符转换为<br>标签
+            formattedContent() {
+                if (!this.content) return '点击编辑';
+                return this.content.replace(/\n/g, '<br>');
+            }
+        },
         methods: {
             // 开始拖拽
             startDrag(event) {
@@ -100,19 +107,39 @@
             editText() {
                 this.isEditing = true;
                 this.$nextTick(() => {
-                    const editableDiv = this.$el.querySelector('[contenteditable]');
+                    const editableDiv = this.$refs.editableContent;
                     if (editableDiv) {
+                        // 设置内容并将光标放到末尾
+                        editableDiv.innerHTML = this.content.replace(/\n/g, '<br>');
                         editableDiv.focus();
+                        
+                        // 将光标放到内容末尾
+                        const range = document.createRange();
+                        const selection = window.getSelection();
+                        range.selectNodeContents(editableDiv);
+                        range.collapse(false); // false表示折叠到末尾
+                        selection.removeAllRanges();
+                        selection.addRange(range);
                     }
                 });
             },
             // 失去焦点时停止编辑
             onBlur() {
                 this.isEditing = false;
+                this.adjustSize(); // 在完成编辑时再次调整大小
             },
             // 文本输入时更新内容
             onInput(event) {
-                this.content = event.target.innerText;
+                // 将HTML格式（包含<br>）转换为包含\n的纯文本
+                let html = event.target.innerHTML;
+                this.content = html.replace(/<br\s*\/?>/gi, '\n')
+                                 .replace(/&nbsp;/g, ' ')
+                                 .replace(/&lt;/g, '<')
+                                 .replace(/&gt;/g, '>')
+                                 .replace(/&amp;/g, '&')
+                                 .replace(/\u200B/g, ''); // 去除零宽空格
+                
+                this.adjustSize();
             },
             startResize(handle) {
                 this.resizing = true;
@@ -178,7 +205,66 @@
                 if (!this.isEditing) {  // 只在非编辑状态下允许删除
                     this.$emit('delete');
                 }
-            }
+            },
+            // 动态调整大小
+            adjustSize() {
+                if (!this.$refs.editableContent) return;
+                
+                // 设置一个临时元素以测量文本尺寸
+                const tempElement = document.createElement('div');
+                tempElement.style.position = 'absolute';
+                tempElement.style.visibility = 'hidden';
+                tempElement.style.width = 'auto';
+                tempElement.style.whiteSpace = 'pre-wrap';
+                tempElement.style.fontSize = this.fontSize + 'px';
+                tempElement.style.fontFamily = this.fontFamily;
+                tempElement.style.padding = '5px';  // 减少测量元素的内边距
+                tempElement.innerHTML = this.content.replace(/\n/g, '<br>');
+                
+                document.body.appendChild(tempElement);
+                
+                // 减少额外边距
+                const extraPadding = 10;  // 从20减少到10
+                const newWidth = Math.max(150, tempElement.clientWidth + extraPadding);
+                const newHeight = Math.max(50, tempElement.clientHeight + extraPadding);
+                
+                document.body.removeChild(tempElement);
+                
+                // 更新尺寸
+                this.position.width = newWidth;
+                this.position.height = newHeight;
+                this.$emit('updatePosition', this.position);
+            },
+            // 处理键盘按下事件
+            handleKeydown(event) {
+                // 处理回车键
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    
+                    // 在光标位置插入<br>标签
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const br = document.createElement('br');
+                    range.deleteContents();
+                    range.insertNode(br);
+                    
+                    // 创建并插入一个零宽空格，以便将光标定位到<br>后面
+                    const textNode = document.createTextNode('\u200B'); // 零宽空格
+                    range.setStartAfter(br);
+                    range.insertNode(textNode);
+                    range.setStartAfter(textNode);
+                    range.collapse(true);
+                    
+                    // 更新选择范围
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // 触发输入事件以更新内容
+                    this.onInput({
+                        target: this.$refs.editableContent
+                    });
+                }
+            },
         }
     };
 </script>
@@ -188,15 +274,21 @@
     position: absolute;
     padding: 10px;
     text-align: center;
-    background-color: lightblue;
+    background-color: transparent;
     cursor: move;
     border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .text-display {
     padding: 5px;
     font-size: 16px;
     color: black;
+    white-space: pre-wrap;
+    text-align: left;
+    width: 100%;
 }
 
 .text-content {
@@ -207,18 +299,29 @@
     border: 1px solid #ddd;
     min-width: 100px;
     min-height: 30px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    text-align: left;
+    width: 100%;
+    background-color: transparent;
 }
 
 .resize-handle {
     position: absolute;
     width: 10px;
     height: 10px;
-    background-color: white;
-    border: 1px solid #666;
+    background-color: transparent;
+    border: 1px solid #4f8cff; /* 添加边框使控制点更明显 */
     border-radius: 50%;
+    z-index: 10;
+    /* 默认隐藏控制点 */
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* 鼠标悬停时显示控制点 */
+.canvas-item.text-tool:hover .resize-handle {
+    opacity: 1;
 }
 
 .top-left {

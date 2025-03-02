@@ -9,6 +9,7 @@
         }"
         @mousedown="startDrag"
         @keydown.backspace="deleteComponent"
+        @wheel.stop
         tabindex="0"
     >
         <div class="resize-handle top-left" @mousedown.stop="startResize('top-left')"></div>
@@ -16,7 +17,7 @@
         <div class="resize-handle bottom-left" @mousedown.stop="startResize('bottom-left')"></div>
         <div class="resize-handle bottom-right" @mousedown.stop="startResize('bottom-right')"></div>
 
-        <div v-if="isEditMode">
+        <div v-if="isEditMode" class="content-container">
             <div class="editor-header">
                 <button @click="togglePreview">{{ isPreview ? '编辑' : '预览' }}</button>
             </div>
@@ -25,6 +26,8 @@
                     v-model="content"
                     class="markdown-editor"
                     @input="updateContent"
+                    @focus="onTextareaFocus"
+                    @blur="onTextareaBlur"
                 ></textarea>
             </div>
             <div v-else class="preview-content" v-html="compiledMarkdown"></div>
@@ -71,6 +74,7 @@ export default {
             initialHeight: 0,
             initialLeft: 0,
             initialTop: 0,
+            isTextareaFocused: false
         };
     },
     computed: {
@@ -166,9 +170,15 @@ export default {
             window.removeEventListener('mouseup', this.stopResize);
         },
         deleteComponent() {
-            if (!this.isEditMode || this.isPreview) {
+            if (!this.isEditMode || !this.isTextareaFocused) {
                 this.$emit('delete');
             }
+        },
+        onTextareaFocus() {
+            this.isTextareaFocused = true;
+        },
+        onTextareaBlur() {
+            this.isTextareaFocused = false;
         }
     }
 };
@@ -181,12 +191,22 @@ export default {
     border: 1px solid #ddd;
     border-radius: 4px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
 }
 
 .editor-header {
     padding: 8px;
     border-bottom: 1px solid #ddd;
     background-color: #f5f5f5;
+    flex-shrink: 0;
 }
 
 .editor-header button {
@@ -199,7 +219,10 @@ export default {
 }
 
 .editor-content {
-    height: calc(100% - 40px);
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .markdown-editor {
@@ -210,12 +233,16 @@ export default {
     resize: none;
     outline: none;
     font-family: monospace;
+    box-sizing: border-box;
+    flex: 1;
 }
 
 .preview-content {
     padding: 15px;
     height: 100%;
     overflow-y: auto;
+    box-sizing: border-box;
+    flex: 1;
 }
 
 :deep(.preview-content) {
@@ -242,14 +269,26 @@ export default {
     }
 }
 
+.preview-content:hover {
+    z-index: 100;
+}
+
 .resize-handle {
     position: absolute;
     width: 10px;
     height: 10px;
     background-color: white;
-    border: 1px solid #666;
+    border: 1px solid #4f8cff;
     border-radius: 50%;
     z-index: 100;
+    /* 默认隐藏控制点 */
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* 鼠标悬停时显示控制点 */
+.canvas-item.markdown-tool:hover .resize-handle {
+    opacity: 1;
 }
 
 .top-left {

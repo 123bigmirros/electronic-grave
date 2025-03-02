@@ -96,7 +96,7 @@ class CanvasProcessor:
         
         # 获取所有匹配的文档
         docs_with_scores = self.global_index.similarity_search_with_score(query, k=k)
-        print(docs_with_scores)
+        # print(docs_with_scores)
         # 根据权限过滤文档
         # print(docs_with_scores)
         filtered_docs = []

@@ -32,6 +32,8 @@
 </template>
 
 <script>
+import { io } from 'socket.io-client';
+
 export default {
     name: 'CustomerService',
     props: {
@@ -49,43 +51,64 @@ export default {
             isExpanded: false,
             messages: [],
             inputMessage: '',
-            ws: null,
+            socket: null,
             sessionId: Date.now().toString() // 生成唯一会话ID
         }
     },
     methods: {
         toggleExpand() {
             this.isExpanded = !this.isExpanded;
-            if (this.isExpanded && !this.ws) {
+            if (this.isExpanded && !this.socket) {
                 this.connectWebSocket();
             }
         },
         
         connectWebSocket() {
-            this.ws = new WebSocket('ws://localhost:5000/ws/chat');
+            console.log('开始连接WebSocket...');
             
-            this.ws.onopen = () => {
-                this.addMessage('system', '连接成功，请问有什么可以帮您？');
-                // 如果有画布数据，发送初始化消息
-                if (this.canvasId) {
-                    this.ws.send(JSON.stringify({
-                        type: 'init',
-                        session_id: this.sessionId,
-                        canvas_id: this.canvasId,
-                        canvas_data: this.canvasData
-                    }));
+            this.socket = io('http://127.0.0.1:5001', {
+                transports: ['polling'],
+                autoConnect: true,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 5
+            });
+            
+            this.socket.on('connect', () => {
+                console.log('Socket连接成功！Socket ID:', this.socket.id);
+                // 连接成功后立即发送初始化消息
+                this.socket.emit('message', {
+                    type: 'init',
+                    session_id: this.sessionId,
+                    canvas_id: this.canvasId,
+                    canvas_data: this.canvasData
+                });
+            });
+            
+            this.socket.on('connect_error', (error) => {
+                console.error('Socket连接错误:', error);
+                this.addMessage('system', '连接失败，请稍后重试');
+            });
+            
+            this.socket.on('response', (response) => {
+                console.log('收到服务器响应:', response);
+                const message = response?.answer || '无响应';
+                const sources = response?.sources || [];
+                
+                // 构建显示内容，包含来源信息
+                let displayContent = message;
+                if (sources && sources.length > 0) {
+                    displayContent += '\n\n参考来源：\n' + sources.join('\n');
                 }
-            };
+                
+                this.addMessage('assistant', displayContent);
+            });
             
-            this.ws.onmessage = (event) => {
-                const response = JSON.parse(event.data);
-                this.addMessage('assistant', response.answer);
-            };
-            
-            this.ws.onclose = () => {
+            this.socket.on('disconnect', () => {
+                console.log('Socket连接断开');
                 this.addMessage('system', '连接已断开');
-                this.ws = null;
-            };
+            });
         },
         
         sendMessage() {
@@ -93,13 +116,16 @@ export default {
             
             this.addMessage('user', this.inputMessage);
             
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({
+            if (this.socket && this.socket.connected) {
+                this.socket.emit('message', {
                     type: 'message',
                     session_id: this.sessionId,
                     message: this.inputMessage,
                     canvas_id: this.canvasId
-                }));
+                });
+            } else {
+                console.error('Socket未连接！');
+                this.addMessage('system', '连接已断开，请刷新页面重试');
             }
             
             this.inputMessage = '';
