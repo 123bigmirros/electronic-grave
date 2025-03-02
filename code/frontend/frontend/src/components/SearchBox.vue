@@ -1,37 +1,48 @@
 <template>
-    <div class="top-nav">
-        <div class="nav-content">
-            <div class="search-container">
-                <div class="search-box">
-                    <input 
-                        type="text" 
-                        v-model="searchQuery" 
-                        placeholder="搜索..."
-                    >
-                    <button class="nav-button" @click="handleSearch">搜索</button>
-                </div>
-                
-                <!-- 搜索结果展示 -->
-                <div 
-                    v-if="searchResults.length > 0" 
-                    class="search-results"
-                    v-click-outside="closeSearchResults"
-                >
+    <div>
+        <!-- 触发区域 - 当鼠标移动到页面顶部时显示导航栏 -->
+        <div class="nav-trigger" @mouseenter="expandNav"></div>
+        
+        <div 
+            class="top-nav" 
+            :class="{ 'expanded': isExpanded }"
+            @mouseenter="expandNav" 
+            @mouseleave="collapseNav"
+        >
+            <div class="nav-content">
+                <div class="search-container">
+                    <div class="search-box">
+                        <input 
+                            type="text" 
+                            v-model="searchQuery" 
+                            placeholder="搜索..."
+                            @focus="expandNav"
+                        >
+                        <button class="nav-button" @click="handleSearch">搜索</button>
+                    </div>
+                    
+                    <!-- 搜索结果展示 -->
                     <div 
-                        v-for="result in searchResults" 
-                        :key="result.canvas_id" 
-                        class="result-item"
-                        @click="viewCanvas(result.canvas_id)"
+                        v-if="searchResults.length > 0" 
+                        class="search-results"
+                        v-click-outside="closeSearchResults"
                     >
-                        <h4>{{ result.title }}</h4>
-                        <p class="result-date">{{ result.content_preview }}</p>
+                        <div 
+                            v-for="result in searchResults" 
+                            :key="result.canvas_id" 
+                            class="result-item"
+                            @click="viewCanvas(result.canvas_id)"
+                        >
+                            <h4>{{ result.title }}</h4>
+                            <p class="result-date">{{ result.content_preview }}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="nav-buttons">
-                <button class="nav-button" @click="goToHome">主页</button>
-                <button class="nav-button" @click="goToPersonal">个人主页</button>
-                <button class="nav-button" @click="goToCreate">创作</button>
+                <div class="nav-buttons">
+                    <button class="nav-button" @click="goToHome">主页</button>
+                    <button class="nav-button" @click="goToPersonal">个人主页</button>
+                    <button class="nav-button" @click="goToCreate">创作</button>
+                </div>
             </div>
         </div>
     </div>  
@@ -61,7 +72,8 @@ export default {
         return {
             searchQuery: '',
             searchResults: [],
-            chatHistory: []
+            chatHistory: [],
+            isExpanded: false
         }
     },
     methods: {
@@ -85,6 +97,8 @@ export default {
                 if (response.data.answer) {
                     this.chatHistory.push([this.searchQuery, response.data.answer]);
                 }
+                // 展开导航栏以显示结果
+                this.expandNav();
             } catch (error) {
                 console.error('搜索失败:', error);
             }
@@ -94,6 +108,7 @@ export default {
             // 导航到只读画布页面
             this.$router.push(`/canvas/view/${canvasId}`);
         },
+        
         goToHome() {
             this.$router.push('/');
         },
@@ -111,23 +126,53 @@ export default {
             console.log('尝试跳转到 gravepaint 页面');
             this.$router.push('/gravepaint');
         },
+        
         closeSearchResults() {
             this.searchResults = [];
+            // 如果没有搜索结果，可以考虑收缩导航栏
+            this.collapseNav();
+        },
+        
+        expandNav() {
+            this.isExpanded = true;
+        },
+        
+        collapseNav() {
+            // 如果有搜索结果或者搜索框有内容，则不收缩
+            if (this.searchResults.length > 0 || this.searchQuery.trim()) {
+                return;
+            }
+            this.isExpanded = false;
         }
     }
 }
 </script>
 
 <style scoped>
+.nav-trigger {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    z-index: 1001;
+}
+
 .top-nav {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    padding: 15px;
-    background-color: rgba(255, 255, 255, 0.95);
+    padding: 5px 15px;
+    background-color: rgba(255, 255, 255, 0.9);
     z-index: 1000;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateY(-100%); /* 完全隐藏 */
+    transition: transform 0.3s ease;
+}
+
+.top-nav.expanded {
+    transform: translateY(0);
 }
 
 .nav-content {
