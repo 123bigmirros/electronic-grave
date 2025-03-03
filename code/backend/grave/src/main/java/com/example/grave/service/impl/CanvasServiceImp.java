@@ -24,25 +24,16 @@ import com.example.grave.pojo.entity.MarkdownBox;
 import com.example.grave.pojo.entity.TextBox;
 import com.example.grave.pojo.vo.CanvasVO;
 import com.example.grave.service.CanvasService;
-import com.example.grave.pojo.entity.HeritageRequest;
 
 @Service
 public class CanvasServiceImp implements CanvasService {
     @Autowired
     private CanvasMapper canvasMapper;
 
-    @Autowired
-    private KafkaTemplate<String, HeritageRequest> kafkaTemplate;
     
     @Value("${kafka.topics.heritage-requests}")
     private String heritageRequestsTopic;
     
-    // 使用ConcurrentMap存储处理中的请求结果
-    private ConcurrentMap<String, HeritageItem> requestResults = new ConcurrentHashMap<>();
-
-    // 存储进行中的请求和对应的CompletableFuture
-    private ConcurrentMap<String, CompletableFuture<HeritageItem>> pendingRequests = new ConcurrentHashMap<>();
-
     public void saveCanvas(CanvasDTO canvasDTO,boolean justContent) {
         // 保存画布主信息并获取生成的ID
         if(!justContent){
