@@ -34,6 +34,12 @@ brew install yarn
     brew services start kafka
     kafka-topics --create --topic heritage-requests --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
     ```
+    5. vue
+    ```
+    cd ./code/frontend/frontend
+    yarn install 
+    yarn serve
+    ```
 
 
 ## Feature

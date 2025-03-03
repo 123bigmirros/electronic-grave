@@ -18,7 +18,6 @@ const routes = [
     { path: '/customer-service', component: CustomerService },  // 添加客服路由
     {
         path: '/canvas/view/:id',
-        name: 'CanvasView',
         component: () => import('../components/CanvasView.vue')
     }
 ];

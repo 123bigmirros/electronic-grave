@@ -91,9 +91,10 @@ export default {
                     url: `/user/canvas/get/${canvasId}/0`,
                     method: 'get'
                 });
-
+                // alert(JSON.stringify(response.data))
                 if (response.data.code === 1) {
                     const canvasData = response.data.data;
+                    // alert(JSON.stringify(canvasData))
                     this.canvasTitle = canvasData.title;
                     this.canvasItems = {
                         texts: canvasData.texts || [],

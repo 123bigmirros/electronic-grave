@@ -87,7 +87,7 @@ export default {
 
         // 查看画布
         viewCanvas(canvasId) {
-            this.$router.push(`/canvas/${canvasId}`);
+            this.$router.push(`/canvas/view/${canvasId}`);
         },
 
         // 编辑画布
