@@ -9,9 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.KafkaHeaders;
+
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
@@ -130,69 +128,78 @@ public class CanvasServiceImp implements CanvasService {
         // 获取当前用户ID
         Long currentUserId = BaseContext.getCurrentId();
         
-        // 创建请求唯一标识
-        String requestId = currentUserId + "-" + heritageId + "-" + System.currentTimeMillis();
-        
-        // 创建请求对象
-        HeritageRequest request = new HeritageRequest(heritageId, currentUserId);
-        
-        // 创建CompletableFuture
-        CompletableFuture<HeritageItem> future = new CompletableFuture<>();
-        
-        // 存储未完成的请求
-        pendingRequests.put(requestId, future);
-        
-        // 发送请求到Kafka
-        kafkaTemplate.send(heritageRequestsTopic, requestId, request);
-        
-        // 设置超时处理
-        CompletableFuture.delayedExecutor(3, TimeUnit.SECONDS).execute(() -> {
-            if (!future.isDone()) {
-                pendingRequests.remove(requestId);
-                future.complete(null); // 超时返回null
+        // 创建CompletableFuture来异步处理结果
+        CompletableFuture<HeritageItem> future = CompletableFuture.supplyAsync(() -> {
+            // 获取指定heritageId下所有未被获得的私密遗产项
+            List<HeritageItem> items = canvasMapper.getUnclaimedPrivateHeritageItems(heritageId);
+            HeritageItem result = null;
+            
+            if (items != null && !items.isEmpty()) {
+                // 随机选择一个遗产项
+                int randomIndex = (int) (Math.random() * items.size());
+                HeritageItem selectedItem = items.get(randomIndex);
+                
+                // 随机决定是否能获得遗产（模拟"有缘"）
+                if (Math.random() < 0.5) { // 50%的概率获得遗产
+                    // 设置用户ID
+                    selectedItem.setUserId(currentUserId);
+                    
+                    // 使用乐观锁更新数据库
+                    try {
+                        boolean updated = canvasMapper.updateHeritageItemOwner(selectedItem);
+                        if (updated) {
+                            result = selectedItem;  // 更新成功，返回获得的遗产项
+                        }
+                    } catch (Exception e) {
+                        // 处理并发更新异常
+                        result = null;
+                    }
+                }
             }
+            
+            return result;
         });
         
         return future;
     }
 
-    @KafkaListener(topics = "${kafka.topics.heritage-requests}", groupId = "${spring.kafka.consumer.group-id}")
-    public void processHeritageRequest(@Header(KafkaHeaders.RECEIVED_KEY) String key, 
-                                     @Payload HeritageRequest request) {
-        // 处理请求
-        HeritageItem result = null;
+    // @KafkaListener(topics = "${kafka.topics.heritage-requests}", groupId = "${spring.kafka.consumer.group-id}")
+    // public void processHeritageRequest(@Header(KafkaHeaders.RECEIVED_KEY) String key, 
+    //                                  @Payload HeritageRequest request) {
+    //     // 处理请求
+    //     HeritageItem result = null;
         
-        // 获取指定heritageId下所有未被获得的私密遗产项
-        List<HeritageItem> items = canvasMapper.getUnclaimedPrivateHeritageItems(request.getHeritageId());
-        if (items != null && !items.isEmpty()) {
-            // 随机选择一个遗产项
-            int randomIndex = (int) (Math.random() * items.size());
-            HeritageItem selectedItem = items.get(randomIndex);
+    //     // 获取指定heritageId下所有未被获得的私密遗产项
+    //     List<HeritageItem> items = canvasMapper.getUnclaimedPrivateHeritageItems(request.getHeritageId());
+    //     if (items != null && !items.isEmpty()) {
+    //         // 随机选择一个遗产项
+    //         int randomIndex = (int) (Math.random() * items.size());
+    //         HeritageItem selectedItem = items.get(randomIndex);
             
-            // 随机决定是否能获得遗产（模拟"有缘"）
-            if (Math.random() < 0.5) { // 50%的概率获得遗产
-                // 设置用户ID
-                selectedItem.setUserId(request.getUserId());
+    //         // 随机决定是否能获得遗产（模拟"有缘"）
+    //         if (Math.random() < 0.5) { // 50%的概率获得遗产
+    //             // 设置用户ID
+    //             selectedItem.setUserId(request.getUserId());
                 
-                // 更新数据库
-                try {
-                    boolean updated = canvasMapper.updateHeritageItemOwner(selectedItem);
-                    if (updated) {
-                        result = selectedItem;  // 更新成功，返回获得的遗产项
-                    }
-                } catch (Exception e) {
-                    // 处理并发更新异常
-                    result = null;
-                }
-            }
-        }
+    //             // 更新数据库
+    //             try {
+    //                 boolean updated = canvasMapper.updateHeritageItemOwner(selectedItem);
+    //                 if (updated) {
+    //                     result = selectedItem;  // 更新成功，返回获得的遗产项
+    //                 }
+    //             } catch (Exception e) {
+    //                 // 处理并发更新异常
+    //                 result = null;
+    //             }
+    //         }
+    //     }
         
-        // 完成对应的CompletableFuture
-        CompletableFuture<HeritageItem> future = pendingRequests.remove(key);
-        if (future != null) {
-            future.complete(result);
-        }
-    }
+    //     // 完成对应的CompletableFuture
+    //     CompletableFuture<HeritageItem> future = pendingRequests.remove(key);
+    //     if (future != null) {
+    //         future.complete(result);
+    //     }
+    // }
 
     @Override
     public List<CanvasVO> getCanvasList(Long userId) {
