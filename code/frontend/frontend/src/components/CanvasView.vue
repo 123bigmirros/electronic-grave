@@ -1,5 +1,6 @@
 <template>
     <div class="canvas-view">
+        <SearchBox />
         <!-- 复用 GravePaint 的大部分模板，但移除工具栏和编辑功能 -->
         <div class="canvas">
             <h3>{{ canvasTitle }}</h3>
@@ -57,7 +58,7 @@ import HeritageTool from './HeritageTool.vue';
 import MarkdownTool from './MarkdownTool.vue';
 import CustomerService from './CustomerService.vue';
 import request from '../utils/request';
-
+import SearchBox from './SearchBox.vue'
 export default {
     name: 'CanvasView',
     components: {
@@ -65,7 +66,8 @@ export default {
         ImgTool,
         HeritageTool,
         MarkdownTool,
-        CustomerService
+        CustomerService,
+        SearchBox
     },
     data() {
         return {

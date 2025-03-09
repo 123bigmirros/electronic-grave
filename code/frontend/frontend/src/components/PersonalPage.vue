@@ -33,6 +33,7 @@
 
 <script>
 import request from '../utils/request';
+import request_py from '../utils/requests_py';
 import SearchBox from './SearchBox.vue';
 export default {
     name: 'PersonalPage',
@@ -112,7 +113,7 @@ export default {
 
                 if (response.data.code === 1) {
                     // 删除对应的embedding
-                    await request({
+                    await request_py({
                         url: `/api/canvas/delete-embedding/${canvasId}`,
                         method: 'post',
                         headers: {

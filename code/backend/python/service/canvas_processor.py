@@ -8,7 +8,7 @@ import pickle
 from mapper.canvas_repository import CanvasRepository
 
 os.environ["OPENAI_API_BASE"] = "https://api.chatanywhere.tech/v1"
-os.environ["OPENAI_API_KEY"] = "sk-X6qmvKSqTxaeFIrmq9v2KlAN6QJEKwxi6eGX5ads7wYERbx0"
+os.environ["OPENAI_API_KEY"] = "sk-CSqSvTCIpuGlKrlCKqySOdr6amRaNFO1TlMPdJKMakL1Iwf4"
 
 class CanvasProcessor:
     def __init__(self):

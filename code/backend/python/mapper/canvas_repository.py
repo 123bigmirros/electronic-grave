@@ -70,7 +70,7 @@ class CanvasRepository:
         return [ImageBox(
             id=row['id'],
             pid=row['pid'],
-            image_url=row['image_url'],
+            image_url=row['imageUrl'],
             left=row['left_location'],
             top=row['top_location'],
             width=row['width_location'],

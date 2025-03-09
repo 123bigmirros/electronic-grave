@@ -10,17 +10,23 @@
 </insert> -->
 
 <insert id="insertTextBoxes" parameterType="com.example.grave.pojo.dto.CanvasDTO">
-    <foreach collection="texts" item="text">
+    <if test="texts != null and texts.size() > 0">
         INSERT INTO TextBox (pid, content, left_location, top_location, width_location, height_location)
-        VALUES (#{id}, #{text.content}, #{text.left}, #{text.top}, #{text.width}, #{text.height});
-    </foreach>
+        VALUES 
+        <foreach collection="texts" item="text" separator=",">
+            (#{id}, #{text.content}, #{text.left}, #{text.top}, #{text.width}, #{text.height})
+        </foreach>
+    </if>
 </insert>
 
 <insert id="insertImageBoxes" parameterType="com.example.grave.pojo.dto.CanvasDTO">
-    <foreach collection="images" item="image">
+    <if test="images != null and images.size() > 0">
         INSERT INTO ImageBox (pid, imageUrl, left_location, top_location, width_location, height_location)
-        VALUES (#{id}, #{image.imageUrl}, #{image.left}, #{image.top}, #{image.width}, #{image.height});
-    </foreach>
+        VALUES 
+        <foreach collection="images" item="image" separator=",">
+            (#{id}, #{image.imageUrl}, #{image.left}, #{image.top}, #{image.width}, #{image.height})
+        </foreach>
+    </if>
 </insert>
 
 <insert id="insertHeritages" parameterType="com.example.grave.pojo.entity.Heritage" useGeneratedKeys="true" keyProperty="id">
@@ -59,9 +65,12 @@
 </insert>
 
 <insert id="insertMarkdowns" parameterType="com.example.grave.pojo.dto.CanvasDTO">
-    <foreach collection="markdowns" item="markdown">
+    <if test="markdowns != null and markdowns.size() > 0">
         INSERT INTO markdown (pid, content, left_location, top_location, width_location, height_location)
-        VALUES (#{id}, #{markdown.content}, #{markdown.left}, #{markdown.top}, #{markdown.width}, #{markdown.height});
-    </foreach>
+        VALUES 
+        <foreach collection="markdowns" item="markdown" separator=",">
+            (#{id}, #{markdown.content}, #{markdown.left}, #{markdown.top}, #{markdown.width}, #{markdown.height})
+        </foreach>
+    </if>
 </insert>
 </mapper>

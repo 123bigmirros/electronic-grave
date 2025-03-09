@@ -17,7 +17,9 @@ export default {
       animationId: null,
       mousePosition: { x: 0, y: 0 },
       isAnimating: true,
-      gradientHue: 0
+      gradientHue: 0,
+      heartbeatTime: 0,
+      lastBeatTime: 0
     }
   },
   mounted() {
@@ -83,33 +85,45 @@ export default {
       const heartPoints = this.generateHeartShape()
       
       heartPoints.forEach(point => {
+        // 创建更多样化的粒子颜色，使用HSL色彩空间以获得更美丽的渐变
+        const hue = Math.random() * 20 + 330 // 330-350范围的色相，粉红到紫红
+        const saturation = Math.random() * 30 + 70 // 70%-100%饱和度
+        const lightness = Math.random() * 20 + 70 // 70%-90%亮度
+        
         this.particles.push({
           x: point.x + this.canvasWidth / 2,
           y: point.y + this.canvasHeight / 2,
           baseX: point.x + this.canvasWidth / 2,
           baseY: point.y + this.canvasHeight / 2,
-          size: Math.random() * 3 + 1,
-          color: `rgb(${Math.random() * 55 + 200}, ${Math.random() * 50 + 50}, ${Math.random() * 50 + 100})`,
+          size: Math.random() * 3.5 + 1.5, // 稍微增大粒子尺寸
+          color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
           speed: Math.random() * 2 + 1,
           angle: Math.random() * Math.PI * 2,
-          amplitude: Math.random() * 20 + 10
+          amplitude: Math.random() * 15 + 5, // 调整振幅范围，使运动更加统一
+          glow: Math.random() * 10 + 10 // 添加不同的发光强度
         })
       })
     },
     generateHeartShape() {
       const points = []
-      const scale = Math.min(this.canvasWidth, this.canvasHeight) * 0.2
+      const scale = Math.min(this.canvasWidth, this.canvasHeight) * 0.22 // 稍微放大爱心
       
-      for (let angle = 0; angle < Math.PI * 2; angle += 0.02) {
+      for (let angle = 0; angle < Math.PI * 2; angle += 0.015) { // 增加点密度
         const x = 16 * Math.pow(Math.sin(angle), 3)
         const y = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle))
         
-        // 为心形轮廓添加随机偏移，创造粒子云效果
-        for (let i = 0; i < 3; i++) {
-          const randomOffset = Math.random() * 20 - 10
+        // 创建主轮廓粒子（少量随机偏移）
+        points.push({
+          x: x * scale / 16 + (Math.random() * 6 - 3), // 较小的随机偏移，使心形轮廓更清晰
+          y: y * scale / 16 + (Math.random() * 6 - 3)
+        })
+        
+        // 在心形内部添加一些随机粒子
+        if (Math.random() < 0.3) {
+          const innerScale = Math.random() * 0.6 + 0.2 // 20%-80%的内部缩放
           points.push({
-            x: x * scale / 16 + randomOffset,
-            y: y * scale / 16 + randomOffset
+            x: x * scale / 16 * innerScale,
+            y: y * scale / 16 * innerScale
           })
         }
       }
@@ -117,52 +131,84 @@ export default {
     },
     drawBackground(ctx) {
       // 渐变背景
-      this.gradientHue = (this.gradientHue + 0.1) % 360
+      this.gradientHue = (this.gradientHue + 0.05) % 360
       const baseHue = this.gradientHue
       
-      // 创建动态径向渐变
+      // 创建动态径向渐变 - 使用更柔和的色彩
       const gradient = ctx.createRadialGradient(
         this.canvasWidth / 2, this.canvasHeight / 2, 0,
-        this.canvasWidth / 2, this.canvasHeight / 2, Math.max(this.canvasWidth, this.canvasHeight) / 1.5
+        this.canvasWidth / 2, this.canvasHeight / 2, Math.max(this.canvasWidth, this.canvasHeight) / 1.2
       )
       
-      gradient.addColorStop(0, `hsla(${baseHue + 240}, 70%, 10%, 0.2)`)
-      gradient.addColorStop(0.5, `hsla(${baseHue + 280}, 90%, 5%, 0.2)`)
-      gradient.addColorStop(1, `hsla(${baseHue + 320}, 80%, 2%, 0.2)`)
+      // 改进背景渐变色，使用更柔和的色调
+      gradient.addColorStop(0, `hsla(${baseHue + 280}, 70%, 15%, 0.2)`) // 更柔和的紫色
+      gradient.addColorStop(0.5, `hsla(${baseHue + 300}, 80%, 8%, 0.2)`) // 深蓝紫色
+      gradient.addColorStop(1, `hsla(${baseHue + 260}, 70%, 5%, 0.2)`) // 深蓝色
       
       ctx.fillStyle = gradient
       ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
       
-      // 绘制背景星星
+      // 绘制背景星星 - 增加星星的亮度和变化
       this.backgroundStars.forEach(star => {
         star.opacity = Math.sin(Date.now() * star.twinkleSpeed) * 0.5 + 0.5
+        
+        // 星星的脉动大小效果
+        const pulseSize = star.size * (1 + Math.sin(Date.now() * 0.001) * 0.2)
+        
         ctx.beginPath()
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity * 0.5})`
+        ctx.arc(star.x, star.y, pulseSize, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity * 0.7})`
         ctx.fill()
+        
+        // 偶尔添加星芒效果
+        if (star.size > 1.5 && Math.random() < 0.3) {
+          ctx.save()
+          ctx.translate(star.x, star.y)
+          ctx.rotate(Date.now() * 0.0005)
+          
+          const starGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, star.size * 4)
+          starGlow.addColorStop(0, `rgba(255, 255, 255, ${star.opacity * 0.8})`)
+          starGlow.addColorStop(1, 'rgba(255, 255, 255, 0)')
+          
+          ctx.beginPath()
+          for (let i = 0; i < 4; i++) {
+            ctx.moveTo(0, 0)
+            ctx.lineTo(0, star.size * 4)
+            ctx.rotate(Math.PI / 2)
+          }
+          ctx.strokeStyle = starGlow
+          ctx.lineWidth = 0.5
+          ctx.stroke()
+          ctx.restore()
+        }
       })
       
-      // 更新和绘制漂浮光点
+      // 更新和绘制漂浮光点 - 调整为更丰富的色彩
       this.floatingLights.forEach(light => {
-        // 更新位置
-        light.x += light.vx
-        light.y += light.vy
+        // 更新位置 - 更加柔和的移动
+        light.x += light.vx * 0.7
+        light.y += light.vy * 0.7
         
         // 边界检查
         if (light.x < 0 || light.x > this.canvasWidth) light.vx *= -1
         if (light.y < 0 || light.y > this.canvasHeight) light.vy *= -1
         
-        // 绘制光点
+        // 绘制光点 - 更富有变化的颜色
         ctx.beginPath()
+        const pulseFactor = 1 + Math.sin(Date.now() * 0.001) * 0.3
         const gradient = ctx.createRadialGradient(
           light.x, light.y, 0,
-          light.x, light.y, light.size * 2
+          light.x, light.y, light.size * 2 * pulseFactor
         )
-        gradient.addColorStop(0, `hsla(${light.hue}, 100%, 70%, ${light.opacity})`)
-        gradient.addColorStop(1, `hsla(${light.hue}, 100%, 50%, 0)`)
+        
+        // 使用基于时间变化的色相
+        const hue = (light.hue + baseHue * 0.2) % 360
+        gradient.addColorStop(0, `hsla(${hue}, 100%, 80%, ${light.opacity * 1.2})`)
+        gradient.addColorStop(0.5, `hsla(${hue - 20}, 100%, 70%, ${light.opacity * 0.7})`)
+        gradient.addColorStop(1, `hsla(${hue - 40}, 100%, 60%, 0)`)
         
         ctx.fillStyle = gradient
-        ctx.arc(light.x, light.y, light.size * 2, 0, Math.PI * 2)
+        ctx.arc(light.x, light.y, light.size * 2 * pulseFactor, 0, Math.PI * 2)
         ctx.fill()
       })
       
@@ -181,28 +227,34 @@ export default {
       const starX = this.canvasWidth / 2
       const starY = this.canvasHeight / 2
       
-      // 创建呼吸效果
+      // 创建呼吸和旋转效果
       const breathEffect = Math.sin(Date.now() * 0.001) * 0.2 + 0.8
+      const rotationAngle = Date.now() * 0.0005
       
-      // 计算星星大小 - 随屏幕大小调整
+      // 计算星星大小 - 调整为更合适的大小，与爱心协调
       const starSize = Math.min(this.canvasWidth, this.canvasHeight) * 0.04
       
-      // 设置发光效果
-      ctx.shadowBlur = 15
-      ctx.shadowColor = `hsla(${this.gradientHue + 50}, 100%, 75%, ${breathEffect * 0.8})`
+      // 设置发光效果 - 使用与爱心协调的色调
+      ctx.shadowBlur = 25
+      ctx.shadowColor = `hsla(${this.gradientHue + 340}, 100%, 75%, ${breathEffect})`
       
-      // 创建星星渐变
+      // 创建星星渐变 - 与爱心粒子色彩协调
       const starGradient = ctx.createRadialGradient(
         starX, starY, 0,
         starX, starY, starSize
       )
-      starGradient.addColorStop(0, `hsla(${this.gradientHue + 50}, 100%, 90%, ${breathEffect})`); // 亮黄色中心
-      starGradient.addColorStop(0.5, `hsla(${this.gradientHue + 40}, 100%, 80%, ${breathEffect})`); // 黄色
-      starGradient.addColorStop(1, `hsla(${this.gradientHue + 30}, 100%, 70%, ${breathEffect * 0.7})`); // 橙黄色边缘
+      starGradient.addColorStop(0, `hsla(${this.gradientHue + 340}, 100%, 95%, ${breathEffect})`); // 更亮的粉色中心
+      starGradient.addColorStop(0.5, `hsla(${this.gradientHue + 335}, 100%, 85%, ${breathEffect})`); // 粉色
+      starGradient.addColorStop(1, `hsla(${this.gradientHue + 330}, 100%, 75%, ${breathEffect * 0.8})`); // 深粉色边缘
       
       ctx.fillStyle = starGradient
       
-      // 绘制五角星
+      // 添加旋转效果
+      ctx.translate(starX, starY)
+      ctx.rotate(rotationAngle)
+      ctx.translate(-starX, -starY)
+      
+      // 绘制五角星 - 更加精致
       ctx.beginPath()
       for (let i = 0; i < 5; i++) {
         // 外角点
@@ -226,10 +278,25 @@ export default {
       ctx.closePath()
       ctx.fill()
       
-      // 添加星星发光效果
+      // 添加星星发光效果 - 更加明亮
       ctx.globalCompositeOperation = 'lighter'
-      ctx.shadowBlur = 25
-      ctx.fillStyle = `hsla(${this.gradientHue + 50}, 100%, 85%, ${breathEffect * 0.4})`
+      ctx.shadowBlur = 35
+      ctx.fillStyle = `hsla(${this.gradientHue + 340}, 100%, 90%, ${breathEffect * 0.7})`
+      
+      // 绘制光芒效果
+      const rayLength = starSize * 2
+      ctx.beginPath()
+      for (let i = 0; i < 8; i++) {
+        const angle = i * Math.PI / 4 + rotationAngle * 0.5 // 添加旋转效果
+        ctx.moveTo(starX, starY)
+        ctx.lineTo(
+          starX + Math.cos(angle) * rayLength,
+          starY + Math.sin(angle) * rayLength
+        )
+      }
+      ctx.strokeStyle = `hsla(${this.gradientHue + 340}, 100%, 95%, ${breathEffect * 0.5})`
+      ctx.lineWidth = 1.5
+      ctx.stroke()
       
       // 再次绘制以增强发光效果
       ctx.beginPath()
@@ -249,6 +316,19 @@ export default {
       }
       ctx.closePath()
       ctx.fill()
+      
+      // 添加小光点装饰
+      for (let i = 0; i < 12; i++) {
+        const angle = i * Math.PI / 6
+        const distance = starSize * 0.9
+        const x = starX + Math.cos(angle) * distance
+        const y = starY + Math.sin(angle) * distance
+        
+        ctx.beginPath()
+        ctx.arc(x, y, starSize * 0.1 * breathEffect, 0, Math.PI * 2)
+        ctx.fillStyle = `hsla(${this.gradientHue + 340}, 100%, 95%, ${breathEffect * 0.8})`
+        ctx.fill()
+      }
       
       ctx.restore()
     },
@@ -286,6 +366,33 @@ export default {
       const canvas = this.$refs.heartCanvas
       const ctx = canvas.getContext('2d')
       
+      // 更新心跳时间
+      const currentTime = Date.now() * 0.001
+      
+      // 模拟心跳的两个阶段：快速收缩和较慢舒张
+      // 每1.2秒一个完整心跳周期
+      const heartbeatCycle = 1.2
+      const beatPhase = ((currentTime % heartbeatCycle) / heartbeatCycle)
+      
+      // 计算心跳强度：模拟心脏的"砰-砰"双跳
+      let heartbeatIntensity = 0
+      if (beatPhase < 0.1) { // 第一次收缩 (砰)
+        heartbeatIntensity = Math.sin(beatPhase * Math.PI / 0.1)
+      } else if (beatPhase < 0.2) { // 第一次舒张
+        heartbeatIntensity = Math.sin((0.2 - beatPhase) * Math.PI / 0.1) * 0.3
+      } else if (beatPhase < 0.3) { // 第二次收缩 (砰)
+        heartbeatIntensity = Math.sin((beatPhase - 0.2) * Math.PI / 0.1) * 0.8
+      } else if (beatPhase < 0.5) { // 第二次舒张
+        heartbeatIntensity = Math.sin((0.5 - beatPhase) * Math.PI / 0.2) * 0.3
+      }
+      // 0.5-1.0是休息期，heartbeatIntensity保持为0
+      
+      // 心跳时发出亮光
+      if (beatPhase < 0.1 && this.heartbeatTime < currentTime - 0.05) {
+        this.heartbeatTime = currentTime
+        this.addHeartbeatGlow(ctx)
+      }
+      
       // 清除画布，使用半透明黑色创造轨迹效果
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
       ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
@@ -296,25 +403,206 @@ export default {
       // 设置全局合成操作
       ctx.globalCompositeOperation = 'lighter'
       
+      // 绘制爱心脉动外环
+      this.drawHeartPulse(ctx, heartbeatIntensity)
+      
+      // 绘制爱心粒子
       this.particles.forEach(particle => {
-        // 粒子运动
+        // 粒子运动 - 添加心跳影响
         particle.angle += 0.02
-        particle.x = particle.baseX + Math.cos(particle.angle) * particle.amplitude
-        particle.y = particle.baseY + Math.sin(particle.angle) * particle.amplitude
+        
+        // 基本位置
+        let x = particle.baseX + Math.cos(particle.angle) * particle.amplitude
+        let y = particle.baseY + Math.sin(particle.angle) * particle.amplitude
+        
+        // 心跳时的额外位移 - 从中心向外扩散
+        const dx = x - this.canvasWidth / 2
+        const dy = y - this.canvasHeight / 2
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        
+        if (distance > 0) {
+          const normalizedDx = dx / distance
+          const normalizedDy = dy / distance
+          
+          // 在心跳时向外扩张，然后快速回缩
+          const heartbeatDisplacement = heartbeatIntensity * 5 * Math.min(distance, 30) / 30
+          
+          x += normalizedDx * heartbeatDisplacement
+          y += normalizedDy * heartbeatDisplacement
+        }
+        
+        // 呼吸效果 + 心跳影响
+        const baseBreathEffect = Math.sin(Date.now() * 0.001 + particle.angle) * 0.3 + 0.7
+        const sizeEffect = baseBreathEffect * (1 + heartbeatIntensity * 0.3)
+        const glowEffect = (1 + heartbeatIntensity * 0.5)
         
         // 绘制粒子
         ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = particle.color
-        ctx.shadowBlur = 15
-        ctx.shadowColor = particle.color
+        ctx.arc(x, y, particle.size * sizeEffect, 0, Math.PI * 2)
+        ctx.fillStyle = this.adjustColorForHeartbeat(particle.color, heartbeatIntensity)
+        ctx.shadowBlur = particle.glow * baseBreathEffect * glowEffect
+        ctx.shadowColor = this.adjustColorForHeartbeat(particle.color, heartbeatIntensity)
         ctx.fill()
+        
+        // 存储实际位置，用于连接线
+        particle.x = x
+        particle.y = y
+        
+        // 为一部分粒子添加连接线，创造网状效果
+        if (Math.random() < 0.03) {
+          this.connectNearbyParticles(ctx, particle, heartbeatIntensity)
+        }
       })
       
       // 重置全局合成操作
       ctx.globalCompositeOperation = 'source-over'
       
       this.animationId = requestAnimationFrame(this.animate)
+    },
+    // 心跳时颜色调整
+    adjustColorForHeartbeat(color, intensity) {
+      if (intensity <= 0) return color
+      
+      // 对HSL颜色进行调整
+      if (color.startsWith('hsl')) {
+        // 提取HSL值
+        const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/)
+        if (hslMatch) {
+          const h = parseInt(hslMatch[1])
+          const s = parseInt(hslMatch[2])
+          const l = parseInt(hslMatch[3])
+          
+          // 心跳时增加亮度，稍微减少饱和度
+          const newL = Math.min(100, l + intensity * 20)
+          const newS = Math.max(60, s - intensity * 10)
+          
+          return `hsl(${h}, ${newS}%, ${newL}%)`
+        }
+      }
+      
+      return color
+    },
+    // 添加心跳发光效果
+    addHeartbeatGlow(ctx) {
+      const centerX = this.canvasWidth / 2
+      const centerY = this.canvasHeight / 2
+      const radius = Math.min(this.canvasWidth, this.canvasHeight) * 0.3
+      
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, radius
+      )
+      
+      gradient.addColorStop(0, `hsla(${this.gradientHue + 340}, 100%, 80%, 0.3)`)
+      gradient.addColorStop(1, 'hsla(0, 0%, 100%, 0)')
+      
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+      ctx.fill()
+      
+      ctx.restore()
+    },
+    // 修改脉动环方法，添加心跳参数
+    drawHeartPulse(ctx, heartbeatIntensity) {
+      const time = Date.now() * 0.001
+      const heartScale = Math.min(this.canvasWidth, this.canvasHeight) * 0.22
+      const centerX = this.canvasWidth / 2
+      const centerY = this.canvasHeight / 2
+      
+      // 创建多个脉动环
+      for (let i = 0; i < 2; i++) {
+        // 同步脉动环与心跳
+        const pulse = (time + i * 1.5) % 3
+        
+        if (pulse < 2) { // 只在特定时间范围内显示
+          // 心跳强度影响脉动环的大小和不透明度
+          const beatEffect = 1 + heartbeatIntensity * 0.3
+          const pulseSize = heartScale * (1 + pulse * 0.5 * beatEffect) // 从心形大小扩展
+          const opacity = (0.3 + heartbeatIntensity * 0.2) * (1 - pulse / 2) // 随着扩大逐渐变透明
+          
+          ctx.save()
+          ctx.translate(centerX, centerY)
+          ctx.beginPath()
+          
+          // 绘制心形轮廓
+          for (let angle = 0; angle < Math.PI * 2; angle += 0.03) {
+            const x = 16 * Math.pow(Math.sin(angle), 3)
+            const y = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle))
+            
+            const px = x * pulseSize / 16
+            const py = y * pulseSize / 16
+            
+            if (angle === 0) {
+              ctx.moveTo(px, py)
+            } else {
+              ctx.lineTo(px, py)
+            }
+          }
+          
+          ctx.closePath()
+          // 心跳时改变脉动环颜色
+          const hue = this.gradientHue + 340 + heartbeatIntensity * 20
+          ctx.strokeStyle = `hsla(${hue}, 100%, ${80 + heartbeatIntensity * 15}%, ${opacity})`
+          ctx.lineWidth = 2 + heartbeatIntensity * 1.5
+          ctx.stroke()
+          ctx.restore()
+        }
+      }
+    },
+    // 修改连接线方法，添加心跳参数
+    connectNearbyParticles(ctx, particle, heartbeatIntensity) {
+      const maxDistance = 50 * (1 + heartbeatIntensity * 0.3) // 心跳时连接距离增加
+      const centerX = this.canvasWidth / 2
+      const centerY = this.canvasHeight / 2
+      
+      // 只连接爱心中心区域的粒子
+      if (Math.abs(particle.x - centerX) > 100 || Math.abs(particle.y - centerY) > 100) {
+        return
+      }
+      
+      // 心跳时增加连接的数量
+      const connectionCount = Math.floor(3 + heartbeatIntensity * 2)
+      
+      // 寻找附近的粒子并连接
+      for (let i = 0; i < connectionCount; i++) {
+        const otherParticle = this.particles[Math.floor(Math.random() * this.particles.length)]
+        const dx = otherParticle.x - particle.x
+        const dy = otherParticle.y - particle.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        
+        if (distance < maxDistance) {
+          // 心跳时增加线的不透明度
+          const opacity = (1 - distance / maxDistance) * (0.2 + heartbeatIntensity * 0.2)
+          ctx.beginPath()
+          ctx.moveTo(particle.x, particle.y)
+          ctx.lineTo(otherParticle.x, otherParticle.y)
+          
+          // 使用粒子自身的颜色创建渐变连接线
+          const gradient = ctx.createLinearGradient(
+            particle.x, particle.y, otherParticle.x, otherParticle.y
+          )
+          
+          // 心跳时调整颜色
+          const color1 = this.adjustColorForHeartbeat(particle.color, heartbeatIntensity)
+            .replace(')', `, ${opacity})`)
+            .replace('hsl', 'hsla')
+          
+          const color2 = this.adjustColorForHeartbeat(otherParticle.color, heartbeatIntensity)
+            .replace(')', `, ${opacity})`)
+            .replace('hsl', 'hsla')
+          
+          gradient.addColorStop(0, color1)
+          gradient.addColorStop(1, color2)
+          
+          ctx.strokeStyle = gradient
+          ctx.lineWidth = 0.5 + heartbeatIntensity * 0.5
+          ctx.stroke()
+        }
+      }
     }
   }
 }
