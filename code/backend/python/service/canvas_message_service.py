@@ -5,15 +5,12 @@ from langchain.schema import (
     HumanMessage,
     AIMessage
 )
-
 class CanvasMessageService:
     def __init__(self):
         self.setup_llm()
         
     def setup_llm(self):
         # 设置OpenAI API
-        os.environ["OPENAI_API_BASE"] = "https://api.chatanywhere.tech/v1"
-        os.environ["OPENAI_API_KEY"] = "sk-CSqSvTCIpuGlKrlCKqySOdr6amRaNFO1TlMPdJKMakL1Iwf4"
         self.llm = ChatOpenAI(temperature=0)
     
     def process_message(self, message, canvas_id=None, history=None):
