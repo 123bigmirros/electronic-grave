@@ -168,7 +168,7 @@ export default {
         
         // 这里直接使用data.data，因为后端返回的是字符串而不是对象
         const imageUrl = data.data.path;
-        this.imageUrl = 'http://localhost:8090' + imageUrl;
+        this.imageUrl = 'http://101.132.43.211:8090' + imageUrl;
        
         
         
