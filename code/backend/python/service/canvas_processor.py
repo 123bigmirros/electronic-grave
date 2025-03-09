@@ -56,8 +56,11 @@ class CanvasProcessor:
         # 删除旧的文档
         if canvas_id in self.canvas_doc_mapping:
             old_doc_ids = self.canvas_doc_mapping[canvas_id]
-            # 直接使用文档ID进行删除，而不是Document对象
-            self.global_index.delete(old_doc_ids)
+            try:
+                # 直接使用文档ID进行删除，而不是Document对象
+                self.global_index.delete(old_doc_ids)
+            except Exception as e:
+                print(f"删除embedding时出错: {str(e)}")
         
         # 添加新文档
         current_doc_count = len(self.global_index.docstore._dict)
