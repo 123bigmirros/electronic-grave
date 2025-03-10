@@ -321,14 +321,49 @@
                     alert('请输入画布标题！');
                     return;
                 }
+                
+                // 处理画布数据，移除前端生成的ID
+                const processedTexts = this.canvasItems.texts.map(item => {
+                    // 如果ID是前端生成的（以'text-'开头），则不传递ID字段
+                    const newItem = {...item};
+                    if (typeof newItem.id === 'string' && newItem.id.startsWith('text-')) {
+                        delete newItem.id;
+                    }
+                    return newItem;
+                });
+                
+                const processedImages = this.canvasItems.images.map(item => {
+                    const newItem = {...item};
+                    if (typeof newItem.id === 'string' && newItem.id.startsWith('img-')) {
+                        delete newItem.id;
+                    }
+                    return newItem;
+                });
+                
+                const processedHeritages = this.canvasItems.heritages.map(item => {
+                    const newItem = {...item};
+                    if (typeof newItem.id === 'string' && newItem.id.startsWith('heritage-')) {
+                        delete newItem.id;
+                    }
+                    return newItem;
+                });
+                
+                const processedMarkdowns = this.canvasItems.markdowns.map(item => {
+                    const newItem = {...item};
+                    if (typeof newItem.id === 'string' && newItem.id.startsWith('md-')) {
+                        delete newItem.id;
+                    }
+                    return newItem;
+                });
+                
                 const canvasData = {
                     id: this.canvasId,
                     title: this.canvasTitle,
                     isPublic: this.isPublic?1:0,
-                    texts: this.canvasItems.texts,
-                    images: this.canvasItems.images,
-                    heritages: this.canvasItems.heritages,
-                    markdowns: this.canvasItems.markdowns
+                    texts: processedTexts,
+                    images: processedImages,
+                    heritages: processedHeritages,
+                    markdowns: processedMarkdowns
                 };
 
                 request({

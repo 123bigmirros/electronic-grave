@@ -98,11 +98,65 @@ export default {
                     const canvasData = response.data.data;
                     // alert(JSON.stringify(canvasData))
                     this.canvasTitle = canvasData.title;
+                    
+                    // 处理文本组件
+                    const processedTexts = (canvasData.texts || []).map(text => ({
+                        content: text.content,
+                        name: text.name,
+                        position: {
+                            left: text.position?.left || text.left || 0,
+                            top: text.position?.top || text.top || 0,
+                            width: text.position?.width || text.width || 200,
+                            height: text.position?.height || text.height || 50,
+                            zIndex: text.position?.zIndex || 1
+                        }
+                    }));
+                    
+                    // 处理图片组件
+                    const processedImages = (canvasData.images || []).map(image => ({
+                        imageUrl: image.imageUrl,
+                        name: image.name,
+                        position: {
+                            left: image.position?.left || image.left || 0,
+                            top: image.position?.top || image.top || 0,
+                            width: image.position?.width || image.width || 150,
+                            height: image.position?.height || image.height || 150,
+                            zIndex: image.position?.zIndex || 1
+                        }
+                    }));
+                    
+                    // 处理遗产组件
+                    const processedHeritages = (canvasData.heritages || []).map(heritage => ({
+                        publicTime: heritage.publicTime,
+                        items: heritage.items || [],
+                        name: heritage.name,
+                        position: {
+                            left: heritage.position?.left || heritage.left || 0,
+                            top: heritage.position?.top || heritage.top || 0,
+                            width: heritage.position?.width || heritage.width || 300,
+                            height: heritage.position?.height || heritage.height || 200,
+                            zIndex: heritage.position?.zIndex || 1
+                        }
+                    }));
+                    
+                    // 处理Markdown组件
+                    const processedMarkdowns = (canvasData.markdowns || []).map(markdown => ({
+                        content: markdown.content,
+                        name: markdown.name,
+                        position: {
+                            left: markdown.position?.left || markdown.left || 0,
+                            top: markdown.position?.top || markdown.top || 0,
+                            width: markdown.position?.width || markdown.width || 400,
+                            height: markdown.position?.height || markdown.height || 300,
+                            zIndex: markdown.position?.zIndex || 1
+                        }
+                    }));
+                    
                     this.canvasItems = {
-                        texts: canvasData.texts || [],
-                        images: canvasData.images || [],
-                        heritages: canvasData.heritages || [],
-                        markdowns: canvasData.markdowns || []
+                        texts: processedTexts,
+                        images: processedImages,
+                        heritages: processedHeritages,
+                        markdowns: processedMarkdowns
                     };
                     
                     // 保存画布创建者ID并检查当前用户是否为创建者
