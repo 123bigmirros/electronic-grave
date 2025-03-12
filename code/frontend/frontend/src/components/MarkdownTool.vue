@@ -7,7 +7,6 @@
             width: position.width + 'px',
             height: position.height + 'px'
         }"
-        @mousedown="startDrag"
         @keydown.backspace="deleteComponent"
         @wheel.stop
         tabindex="0"
@@ -18,8 +17,8 @@
         <div class="resize-handle bottom-right" @mousedown.stop="startResize('bottom-right')"></div>
 
         <div v-if="isEditMode" class="content-container">
-            <div class="editor-header">
-                <button @click="togglePreview">{{ isPreview ? '编辑' : '预览' }}</button>
+            <div class="editor-header" @mousedown="startDrag">
+                <button @click.stop="togglePreview">{{ isPreview ? '编辑' : '预览' }}</button>
             </div>
             <div v-if="!isPreview" class="editor-content">
                 <textarea
@@ -29,11 +28,19 @@
                     @focus="onTextareaFocus"
                     @blur="onTextareaBlur"
                     @keydown.tab.prevent="handleTabKey"
+                    @mousedown.stop
                 ></textarea>
             </div>
-            <div v-else class="preview-content" v-html="compiledMarkdown"></div>
+            <div v-else class="preview-content" @mousedown.stop>
+                <div v-html="compiledMarkdown"></div>
+            </div>
         </div>
-        <div v-else class="preview-content" v-html="compiledMarkdown"></div>
+        <div v-else class="preview-content" @mousedown.stop>
+            <div v-html="compiledMarkdown"></div>
+        </div>
+        
+        <!-- 添加一个标题栏用于拖动 -->
+        <div v-if="isEditMode" class="drag-handle" @mousedown="startDrag"></div>
     </div>
 </template>
 
@@ -299,6 +306,7 @@ export default {
     border-bottom: 1px solid #ddd;
     background-color: #f5f5f5;
     flex-shrink: 0;
+    cursor: move;
 }
 
 .editor-header button {
@@ -414,5 +422,17 @@ export default {
 /* 添加KaTeX样式支持 */
 :deep(.preview-content .katex) {
     font-size: 1.1em;
+}
+
+/* 添加拖动条样式 */
+.drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: move;
+    background-color: transparent;
+    z-index: 99;
 }
 </style> 

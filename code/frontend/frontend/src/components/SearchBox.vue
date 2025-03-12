@@ -123,8 +123,8 @@ export default {
         },
         
         goToCreate() {
-            console.log('尝试跳转到 gravepaint 页面');
-            this.$router.push('/gravepaint');
+            console.log('尝试创建新画布');
+            this.$router.push('/gravepaint/new');
         },
         
         closeSearchResults() {
