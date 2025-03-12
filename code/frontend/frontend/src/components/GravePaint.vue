@@ -18,12 +18,16 @@
                 <div class="tool" @click="addMarkdownTool">
                     <p>Markdown编辑器</p>
                 </div>
+                <!-- 添加上传图片按钮 -->
+                
                 <div class="tool" @click="saveCanvas">
                     <p>保存画布</p>
                 </div>
-                
-                <!-- 添加对话控制按钮 -->
-                <div class="tool chat-tool" @click="toggleChatPanel">
+                <div class="tool upload-tool" @click="openImageUploader">
+                    <p>上传图片</p>
+                </div>
+                <!-- 对话控制按钮 -->
+                <div class="tool chat-tool" @click="toggleChatInput">
                     <p>对话控制</p>
                 </div>
             </div>
@@ -133,24 +137,6 @@
             </div>
         </div>
 
-        <!-- 添加对话控制面板 -->
-        <div v-if="showChatPanel" class="chat-panel">
-            <div class="chat-header">
-                <h3>对话控制</h3>
-                <button @click="toggleChatPanel" class="close-btn">×</button>
-            </div>
-            <div class="chat-messages" ref="chatMessages">
-                <div v-for="(msg, index) in chatHistory" :key="index" 
-                    :class="['chat-message', msg.role === 'user' ? 'user-message' : 'assistant-message']">
-                    {{ msg.content }}
-                </div>
-            </div>
-            <div class="chat-input">
-                <textarea v-model="userMessage" @keydown.enter="sendMessage" placeholder="输入指令控制画布组件..."></textarea>
-                <button @click="sendMessage">发送</button>
-            </div>
-        </div>
-
         <!-- 添加保存画布对话框 -->
         <div v-if="showSaveDialog" class="save-dialog-overlay">
             <div class="save-dialog">
@@ -171,6 +157,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- 图片上传输入 -->
+        <input
+            type="file"
+            ref="uploadFileInput"
+            accept="image/*"
+            @change="handleFileSelect"
+            style="display: none;"
+        />
+
+        <!-- 简化的消息提示 -->
+        <div v-if="showNotification" class="notification" :class="{ 'fade-out': isNotificationFading }">
+            {{ notificationMessage }}
+        </div>
+        
+        <!-- 浮动聊天输入框 -->
+        <div v-if="showChatInput" class="chat-input-floating">
+            <div class="chat-input-container">
+                <textarea 
+                    v-model="userMessage" 
+                    @keydown.enter.prevent="sendMessage" 
+                    placeholder="输入指令控制画布组件..."
+                    ref="chatTextarea"
+                    autofocus
+                ></textarea>
+                <div class="send-arrow" @click="sendMessage">
+                    <i class="arrow-icon">&#10148;</i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加透明遮罩用于捕获点击事件 -->
+        <div v-if="showChatInput" class="chat-overlay" @click="hideChatInput"></div>
     </div>
 </template>
 
@@ -205,11 +224,18 @@
                 canvasId: null,  // 新增：存储画布ID
                 currentZIndex: 1,  // 添加一个跟踪当前z-index的计数器
                 
-                // 添加对话控制相关数据
-                showChatPanel: false,
+                // 修改对话相关数据
+                showChatInput: false,
                 userMessage: '',
                 chatHistory: [],
-                isProcessing: false
+                isProcessing: false,
+                
+                // 替换旧的图片上传相关数据
+                isUploading: false,
+                uploadedImageUrl: '',
+                showNotification: false,
+                notificationMessage: '',
+                isNotificationFading: false
             };
         },
         methods: {
@@ -498,32 +524,45 @@
                 }
             },
             
-            // 切换对话面板显示
-            toggleChatPanel() {
-                this.showChatPanel = !this.showChatPanel;
+            // 切换对话输入框显示
+            toggleChatInput() {
+                this.showChatInput = !this.showChatInput;
+                if (this.showChatInput) {
+                    // 当对话框显示时，设置焦点到输入框
+                    this.$nextTick(() => {
+                        if (this.$refs.chatTextarea) {
+                            this.$refs.chatTextarea.focus();
+                        }
+                    });
+                }
+            },
+            
+            // 隐藏对话输入框但保留内容
+            hideChatInput() {
+                this.showChatInput = false;
+                // 不清空userMessage，以便下次打开时恢复
             },
             
             // 发送用户消息到后端处理
-            async sendMessage(event) {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                }
-                
+            async sendMessage() {
                 if (!this.userMessage.trim() || this.isProcessing) return;
                 
-                // 将用户消息添加到聊天历史
-                this.chatHistory.push({
-                    role: 'user',
-                    content: this.userMessage
-                });
-                
+                // 保存用户消息
                 const message = this.userMessage;
-                this.userMessage = '';
                 this.isProcessing = true;
+                
+                // 显示"正在处理..."的通知
+                this.showNotificationMessage('正在处理您的请求...');
                 
                 try {
                     // 准备画布摘要信息，包含组件编号
                     const canvasSummary = this.prepareCanvasSummary();
+                    
+                    // 将用户消息添加到聊天历史
+                    this.chatHistory.push({
+                        role: 'user',
+                        content: message
+                    });
                     
                     // 发送请求到后端
                     const response = await request_py({
@@ -543,20 +582,23 @@
                         content: response.data.answer
                     });
                     
+                    // 显示AI回复作为通知
+                    this.showNotificationMessage(response.data.answer);
+                    
                     // 处理AI返回的操作指令
                     if (response.data.action) {
                         this.executeAction(response.data.action);
                     }
                     
-                    // 滚动到最新消息
-                    this.$nextTick(() => {
-                        const chatContainer = this.$refs.chatMessages;
-                        if (chatContainer) {
-                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                        }
-                    });
+                    // 关闭对话输入框并清空内容
+                    this.showChatInput = false;
+                    this.userMessage = '';
+                    
                 } catch (error) {
                     console.error('处理消息失败:', error);
+                    this.showNotificationMessage('很抱歉，处理您的请求时出现错误。请稍后重试。');
+                    
+                    // 添加错误信息到聊天历史
                     this.chatHistory.push({
                         role: 'assistant',
                         content: '很抱歉，处理您的请求时出现错误。请稍后重试。'
@@ -897,7 +939,96 @@
             findComponentIndex(type, id) {
                 const componentList = this.getComponentList(type);
                 return componentList.findIndex(item => item.id === id);
-            }
+            },
+            
+            // 打开图片上传选择器
+            openImageUploader() {
+                this.$refs.uploadFileInput.click();
+            },
+            
+            // 处理文件选择
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    this.uploadImage(file);
+                }
+            },
+            
+            // 上传图片到服务器
+            async uploadImage(file) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    this.isUploading = true;
+                    
+                    const response = await request({
+                        url: '/api/upload/image',
+                        method: 'POST',
+                        data: formData,
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    const data = response.data;
+                    
+                    // 获取图片URL
+                    const imageUrl = data.data.path;
+                    this.uploadedImageUrl = 'http://101.132.43.211:8090' + imageUrl;
+                    
+                    // 直接复制链接到剪贴板
+                    this.copyToClipboard(this.uploadedImageUrl);
+                    
+                    // 显示通知
+                    this.showNotificationMessage('图片链接已复制到剪贴板');
+                    
+                    // 重置文件输入以便下次上传
+                    this.$refs.uploadFileInput.value = '';
+                    
+                } catch (error) {
+                    console.error('图片上传错误:', error);
+                    this.showNotificationMessage('图片上传失败: ' + error.message);
+                } finally {
+                    this.isUploading = false;
+                }
+            },
+            
+            // 复制内容到剪贴板
+            copyToClipboard(text) {
+                // 创建一个临时的textarea元素
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';  // 避免滚动到底部
+                document.body.appendChild(textarea);
+                textarea.select();
+                
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('复制到剪贴板失败:', err);
+                }
+                
+                document.body.removeChild(textarea);
+            },
+            
+            // 显示通知消息
+            showNotificationMessage(message) {
+                this.notificationMessage = message;
+                this.showNotification = true;
+                this.isNotificationFading = false;
+                
+                // 设置3秒后开始淡出
+                setTimeout(() => {
+                    this.isNotificationFading = true;
+                    
+                    // 淡出后完全隐藏
+                    setTimeout(() => {
+                        this.showNotification = false;
+                    }, 1000);
+                }, 2000);
+            },
         },
         mounted() {
             // 检查用户是否登录
@@ -1049,96 +1180,112 @@
     pointer-events: none;
 }
 
-/* 添加聊天面板样式 */
-.chat-panel {
+/* 浮动聊天输入框样式 */
+.chat-input-floating {
     position: fixed;
-    right: 20px;
-    bottom: 20px;
-    width: 350px;
-    height: 500px;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50%;
+    max-width: 600px;
     z-index: 1001;
+    animation: slide-up 0.3s ease;
 }
 
-.chat-header {
-    padding: 10px 15px;
-    border-bottom: 1px solid #eee;
+.chat-input-container {
+    background-color: white;
+    border-radius: 18px;
+    padding: 12px 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    border: 1px solid #eaeaea;
 }
 
-.chat-header h3 {
-    margin: 0;
-}
-
-.close-btn {
-    background: none;
+.chat-input-floating textarea {
+    width: 100%;
     border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #666;
-}
-
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.chat-message {
-    padding: 8px 12px;
-    border-radius: 6px;
-    max-width: 80%;
-    word-break: break-word;
-}
-
-.user-message {
-    align-self: flex-end;
-    background-color: #4CAF50;
-    color: white;
-}
-
-.assistant-message {
-    align-self: flex-start;
-    background-color: #f1f1f1;
-    color: #333;
-}
-
-.chat-input {
-    padding: 10px;
-    border-top: 1px solid #eee;
-    display: flex;
-    gap: 10px;
-}
-
-.chat-input textarea {
-    flex: 1;
+    padding: 8px 5px;
     resize: none;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px;
-    height: 60px;
+    height: 40px;
+    font-size: 15px;
+    outline: none;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.chat-input button {
-    padding: 0 15px;
+.send-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
     background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
+    border-radius: 50%;
     cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
+.send-arrow:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+}
+
+.arrow-icon {
+    color: white;
+    font-size: 16px;
+    font-style: normal;
+}
+
+/* 通知样式增强 */
+.notification {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 2000;
+    transition: opacity 1s;
+    opacity: 1;
+    max-width: 80%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-size: 15px;
+}
+
+.notification.fade-out {
+    opacity: 0;
+}
+
+/* 入场动画 */
+@keyframes slide-up {
+    from {
+        transform: translate(-50%, 20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+/* 修改聊天工具按钮样式 */
 .chat-tool {
-    margin-top: 20px;
+    margin-top: 5px;
     background-color: #e3f0ff;
+}
+
+/* 添加透明遮罩用于捕获点击事件 */
+.chat-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background-color: transparent;
 }
 </style>

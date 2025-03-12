@@ -28,6 +28,7 @@
                     @input="updateContent"
                     @focus="onTextareaFocus"
                     @blur="onTextareaBlur"
+                    @keydown.tab.prevent="handleTabKey"
                 ></textarea>
             </div>
             <div v-else class="preview-content" v-html="compiledMarkdown"></div>
@@ -38,6 +39,66 @@
 
 <script>
 import { marked } from 'marked';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+
+// 配置marked以支持LaTeX，并立即执行
+const katexExtension = {
+    name: 'katex',
+    level: 'inline',
+    start(src) { return src.indexOf('$'); },
+    tokenizer(src) {
+        const match = src.match(/^\$(.*?)\$/);
+        if (match) {
+            return {
+                type: 'katex',
+                raw: match[0],
+                text: match[1].trim()
+            };
+        }
+        return false;
+    },
+    renderer(token) {
+        try {
+            return katex.renderToString(token.text, {
+                throwOnError: false,
+                displayMode: false
+            });
+        } catch (e) {
+            return `<span style="color:red">${e.message}</span>`;
+        }
+    }
+};
+
+const katexBlockExtension = {
+    name: 'katexBlock',
+    level: 'block',
+    start(src) { return src.indexOf('$$'); },
+    tokenizer(src) {
+        const match = src.match(/^\$\$([\s\S]*?)\$\$/);
+        if (match) {
+            return {
+                type: 'katexBlock',
+                raw: match[0],
+                text: match[1].trim()
+            };
+        }
+        return false;
+    },
+    renderer(token) {
+        try {
+            return katex.renderToString(token.text, {
+                throwOnError: false,
+                displayMode: true
+            });
+        } catch (e) {
+            return `<div style="color:red">${e.message}</div>`;
+        }
+    }
+};
+
+// 立即执行初始化
+marked.use({ extensions: [katexExtension, katexBlockExtension] });
 
 export default {
     name: 'MarkdownTool',
@@ -79,8 +140,25 @@ export default {
     },
     computed: {
         compiledMarkdown() {
-            return marked(this.content);
+            // 确保marked已配置
+            if (!this.content) return '';
+            
+            try {
+                return marked(this.content);
+            } catch (e) {
+                console.error('Markdown渲染错误:', e);
+                return `<div style="color:red">渲染错误: ${e.message}</div>`;
+            }
         }
+    },
+    created() {
+        // 在创建时再次确保初始化已完成
+        if (!marked.defaults.extensions) {
+            marked.use({ extensions: [katexExtension, katexBlockExtension] });
+        }
+    },
+    mounted() {
+        // 不再需要在这里初始化，因为我们已经在导入时完成了初始化
     },
     methods: {
         startDrag(event) {
@@ -179,6 +257,20 @@ export default {
         },
         onTextareaBlur() {
             this.isTextareaFocused = false;
+        },
+        handleTabKey(event) {
+            // 阻止默认Tab行为
+            const textarea = event.target;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            
+            // 在光标位置插入缩进（4个空格）
+            this.content = this.content.substring(0, start) + '    ' + this.content.substring(end);
+            
+            // 移动光标到缩进后的位置
+            this.$nextTick(() => {
+                textarea.selectionStart = textarea.selectionEnd = start + 4;
+            });
         }
     }
 };
@@ -317,5 +409,10 @@ export default {
 
 .canvas-item {
     outline: none;
+}
+
+/* 添加KaTeX样式支持 */
+:deep(.preview-content .katex) {
+    font-size: 1.1em;
 }
 </style> 
