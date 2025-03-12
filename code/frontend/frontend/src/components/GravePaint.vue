@@ -336,26 +336,23 @@
                 this.canvasItems.markdowns[index].content = content;
             },
             saveCanvas() {
-                // 如果已有ID和标题，直接保存
-                if (this.canvasId && this.canvasTitle.trim()) {
-                    this.confirmSave();
-                } else {
-                    // 否则显示保存对话框
-                    this.showSaveDialog = true;
-                }
+                this.showSaveDialog = true;
             },
             cancelSave() {
                 this.showSaveDialog = false;
                 this.canvasTitle = '';
             },
-            async confirmSave() {
+            confirmSave() {
                 if (!this.canvasTitle.trim()) {
-                    this.showNotificationMessage('请输入画布标题');
+                    alert('请输入画布标题！');
                     return;
                 }
                 
-                // 显示保存中的通知
-                this.showNotificationMessage('正在保存画布...');
+                // 关闭保存对话框
+                this.showSaveDialog = false;
+                
+                // 显示"保存中..."通知
+                this.showNotificationMessage('保存中...');
                 
                 // 处理画布数据，移除前端生成的ID
                 const processedTexts = this.canvasItems.texts.map(item => {
@@ -401,18 +398,21 @@
                     markdowns: processedMarkdowns
                 };
 
-                try {
-                    const response = await request({
-                        method: 'post',
-                        url: '/user/canvas/save',
-                        data: canvasData,
-                        headers: {
-                            "userId": localStorage.getItem('userId'),
-                        }
-                    });
-                    
+                request({
+                    method: 'post',
+                    url: '/user/canvas/save',
+                    data: canvasData,
+                    headers: {
+                        "userId": localStorage.getItem('userId'),
+                    }
+                })
+                .then(response => {
                     if (response.data.code === 1) {
                         this.canvasId = response.data.data;
+                        
+                        // 显示"保存成功"通知
+                        this.showNotificationMessage('画布保存成功！');
+                        
                         // 调用embedding API
                         request_py({
                             method: 'post',
@@ -421,19 +421,17 @@
                                 canvas_id: this.canvasId
                             }
                         });
-                        
-                        // 关闭保存画布对话框
-                        this.showSaveDialog = false;
-                        
-                        // 显示保存成功提示（使用已有的渐隐消失通知）
-                        this.showNotificationMessage('画布保存成功');
                     } else {
+                        // 显示保存失败通知
+                        this.showNotificationMessage('保存失败：' + response.data.msg);
                         throw new Error('保存失败：' + response.data.msg);
                     }
-                } catch (error) {
+                })
+                .catch(error => {
                     console.error('操作失败:', error);
-                    this.showNotificationMessage('保存失败，请检查网络连接');
-                }
+                    // 显示错误通知
+                    this.showNotificationMessage('操作失败，请检查网络连接');
+                });
             },
             deleteComponent(type, index) {
                 switch(type) {
@@ -454,23 +452,6 @@
             // 新增：加载现有画布数据
             async loadCanvasData() {
                 const canvasId = this.$route.params.id;
-
-                // 如果参数是"new"，则清空画布内容并创建新画布
-                if (canvasId === "new") {
-                    this.canvasId = -1;
-                    this.canvasTitle = '';
-                    this.isPublic = true;
-                    // 清空所有组件
-                    this.canvasItems = {
-                        texts: [],
-                        images: [],
-                        heritages: [],
-                        markdowns: []
-                    };
-                    // 显示通知
-                    this.showNotificationMessage('已创建新画布');
-                    return;
-                }
 
                 if (!canvasId||canvasId==="undefined") {
                     this.canvasId = -1;
@@ -1079,25 +1060,21 @@
             },
             
             // 处理键盘快捷键
-            handleKeyDown(event) {
-                // 检测 Cmd+S (Mac) 或 Ctrl+S (Windows/Linux)
-                if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-                    // 阻止浏览器默认的保存页面行为
-                    event.preventDefault();
-                    event.stopPropagation();
+            handleKeyDown(e) {
+                // 检测Cmd+S (Mac) 或 Ctrl+S (Windows/Linux)
+                if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                    // 阻止浏览器默认的保存行为
+                    e.preventDefault();
                     
-                    // 触发保存画布逻辑
-                    this.handleSaveWithShortcut();
-                    
-                    // 确保返回 false 以防止任何其他处理
-                    return false;
+                    // 执行保存逻辑
+                    this.quickSave();
                 }
             },
             
-            // 通过快捷键触发保存
-            handleSaveWithShortcut() {
-                if (this.canvasId && this.canvasTitle) {
-                    // 如果已有ID和标题，直接保存
+            // 快速保存函数
+            quickSave() {
+                // 如果已有标题，直接保存
+                if (this.canvasTitle.trim()) {
                     this.confirmSave();
                 } else {
                     // 否则显示保存对话框
@@ -1116,19 +1093,13 @@
             // 加载画布数据
             this.loadCanvasData();
             
-            // 添加全局键盘事件监听器用于保存 - 使用捕获阶段（第三个参数为true）
-            document.addEventListener('keydown', this.handleKeyDown, true);
-            // 为特定的常见元素添加阻止默认行为的监听器
-            document.querySelectorAll('input, textarea').forEach(el => {
-                el.addEventListener('keydown', this.handleKeyDown, true);
-            });
+            // 添加全局键盘事件监听
+            document.addEventListener('keydown', this.handleKeyDown);
         },
+        
         beforeUnmount() {
-            // 移除全局键盘事件监听器
-            window.removeEventListener('keydown', this.handleKeyDown);
-            document.querySelectorAll('input, textarea').forEach(el => {
-                el.removeEventListener('keydown', this.handleKeyDown, true);
-            });
+            // 组件销毁前移除事件监听，避免内存泄漏
+            document.removeEventListener('keydown', this.handleKeyDown);
         }
     };
 </script>
