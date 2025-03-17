@@ -20,19 +20,18 @@ start_backend_springboot() {
 # 启动后端搜索API服务
 start_backend_search() {
   echo "启动后端搜索API服务..."
+  export OPENAI_API_BASE="https://api.chatanywhere.tech/v1"
+  export OPENAI_API_KEY="sk-CSqSvTCIpuGlKrlCKqySOdr6amRaNFO1TlMPdJKMakL1Iwf4"
   cd code/backend/grave && conda activate grave && python -m controller.search_api
 }
 
-# 启动后端Socket API服务
-start_backend_socket() {
-  echo "启动后端Socket API服务..."
-  cd code/backend/grave && conda activate grave && python -m controller.socket_api
-}
-
-# 在不同的终端窗口中启动各服务
-gnome-terminal --tab --title="前端" -- bash -c "start_frontend; exec bash"
-gnome-terminal --tab --title="后端Spring" -- bash -c "start_backend_springboot; exec bash"
-gnome-terminal --tab --title="后端搜索API" -- bash -c "start_backend_search; exec bash"
-gnome-terminal --tab --title="后端Socket API" -- bash -c "start_backend_socket; exec bash"
+# 使用screen在后台启动各服务
+screen -dmS frontend bash -c "start_frontend; exec bash"
+screen -dmS backend-spring bash -c "start_backend_springboot; exec bash"
+screen -dmS backend-search bash -c "start_backend_search; exec bash"
 
 echo "所有服务已启动"
+echo "查看所有screen会话: screen -ls"
+echo "连接到特定会话: screen -r [会话名]"
+echo "例如: screen -r frontend"
+echo "从会话中分离: Ctrl+A 然后按 D"
