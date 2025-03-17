@@ -25,7 +25,7 @@ class CanvasProcessor:
 
     def load_or_init_indices(self):
         try:
-            self.global_index = FAISS.load_local("faiss_indices/global_index", self.embeddings)
+            self.global_index = FAISS.load_local("faiss_indices/global_index", self.embeddings,allow_dangerous_deserialization=True)
             # 加载映射关系
             if os.path.exists("faiss_indices/canvas_mapping.pkl"):
                 with open("faiss_indices/canvas_mapping.pkl", "rb") as f:
