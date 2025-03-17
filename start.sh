@@ -41,7 +41,9 @@ start_backend_search() {
 
 # 使用screen在后台启动各服务，将函数定义包含在传递给screen的命令中
 screen -dmS frontend bash -c "$(declare -f start_frontend); start_frontend; exec bash"
+sleep 2
 screen -dmS backend-spring bash -c "$(declare -f start_backend_springboot); start_backend_springboot; exec bash"
+sleep 5
 screen -dmS backend-search bash -c "$(declare -f start_backend_search); start_backend_search; exec bash"
 
 echo "所有服务已启动"
