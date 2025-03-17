@@ -24,9 +24,19 @@ start_backend_search() {
   
   export OPENAI_API_BASE="https://api.chatanywhere.tech/v1"
   export OPENAI_API_KEY="sk-CSqSvTCIpuGlKrlCKqySOdr6amRaNFO1TlMPdJKMakL1Iwf4"
-  source ~/.bashrc
-  sleep 2 
-  cd code/backend/python && conda activate grave && python -m controller.search_api
+  
+  # 方法1：使用conda run (推荐)
+  # cd code/backend/python && conda run -n grave python -m controller.search_api
+  
+  # 或者方法2：手动初始化conda (如果方法1不行)
+  # cd code/backend/python
+  # eval "$(conda shell.bash hook)"
+  # conda activate grave
+  # python -m controller.search_api
+  
+  # 或者方法3：使用完整路径 (如果前两种方法都不行)
+  cd code/backend/python
+  /root/anaconda3/envs/grave/bin/python -m controller.search_api
 }
 
 # 使用screen在后台启动各服务，将函数定义包含在传递给screen的命令中
