@@ -120,7 +120,7 @@ def handle_canvas_control(data):
     user_message = data.get('message', '')
     canvas_summary = data.get('canvas_summary', {})
     history = data.get('history', [])
-    
+    print(canvas_summary)
     # 构建系统提示
     system_prompt = create_canvas_control_prompt(canvas_summary)
     

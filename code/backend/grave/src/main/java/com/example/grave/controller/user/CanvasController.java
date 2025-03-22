@@ -37,6 +37,7 @@ public class CanvasController {
     private CanvasService canvasService;
     @PostMapping("/save")
     public Result submit(@RequestBody CanvasDTO canvasDTO){
+        System.out.println("submit");
         // canvasDTO.setId((new Random()).nextLong(10000));
         // System.out.println(canvasDTO.getIsPublic());
         Long userId= BaseContext.getCurrentId();
@@ -44,7 +45,7 @@ public class CanvasController {
             return Result.error("用户未登录");
         }
         canvasDTO.setUserId(userId);
-        System.out.println(canvasDTO.getId());
+        System.out.println(canvasDTO.getTitle());
         if(canvasDTO.getId() == -1){
             canvasService.saveCanvas(canvasDTO,false);
         }else{
