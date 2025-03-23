@@ -20,12 +20,13 @@
             <div
                     v-if="isEditing"
                     contenteditable="true"
-                    class="text-content"
+                    class="text-content heading-mode"
                     :style="{
                             fontSize: fontSize + 'px',
                             color: textColor,
                             fontFamily: fontFamily,
-                            textAlign: textAlign
+                            textAlign: textAlign,
+                            fontWeight: isBold ? 'bold' : 'normal'
                             }"
                     @blur="onBlur"
                     @input="onInput"
@@ -33,7 +34,16 @@
                     ref="editableContent"
                     >
             </div>
-                <div v-else @click="editText" class="text-display" v-html="formattedContent"></div>
+            <div 
+                v-else 
+                @click="editText" 
+                class="text-display"
+                v-html="formattedContent">
+            </div>
+            
+            <div v-if="isEditing" class="text-toolbar">
+                <button @click="toggleBold" :class="{ 'active': isBold }">B</button>
+            </div>
     </div>
 </template>
 
@@ -64,6 +74,7 @@
                 textColor: '#000000',  // 字体颜色
                 fontFamily: 'Arial',  // 字体
                 textAlign: 'left',  // 对齐方式
+                isBold: false,  // 是否粗体
                 resizing: false,
                 resizeHandle: null,
                 initialWidth: 0,
@@ -73,10 +84,15 @@
             };
         },
         computed: {
-            // 格式化内容，将换行符转换为<br>标签
+            // 格式化内容，将换行符转换为<br>标签，并使用h3标签
             formattedContent() {
                 if (!this.content) return '点击编辑';
-                return this.content.replace(/\n/g, '<br>');
+                
+                // 处理换行符
+                const processedContent = this.content.replace(/\n/g, '<br>');
+                
+                // 始终使用h3标签
+                return `<h3 style="margin: 0; padding: 0;">${processedContent}</h3>`;
             }
         },
         methods: {
@@ -109,25 +125,50 @@
                 this.$nextTick(() => {
                     const editableDiv = this.$refs.editableContent;
                     if (editableDiv) {
-                        // 设置内容并将光标放到末尾
-                        editableDiv.innerHTML = this.content.replace(/\n/g, '<br>');
+                        // 直接设置原始内容
+                        editableDiv.innerHTML = this.content.replace(/\n/g, '<br>') || '&nbsp;';
                         editableDiv.focus();
                         
                         // 将光标放到内容末尾
-                        const range = document.createRange();
-                        const selection = window.getSelection();
-                        range.selectNodeContents(editableDiv);
-                        range.collapse(false); // false表示折叠到末尾
-                        selection.removeAllRanges();
-                        selection.addRange(range);
+                        this.setCaretToEnd(editableDiv);
                     }
                 });
             },
+            
+            // 设置光标到元素末尾的辅助方法
+            setCaretToEnd(element) {
+                const range = document.createRange();
+                const selection = window.getSelection();
+                
+                // 处理空元素的情况
+                if (element.childNodes.length === 0) {
+                    const textNode = document.createTextNode('\u200B'); // 零宽空格
+                    element.appendChild(textNode);
+                }
+                
+                range.selectNodeContents(element);
+                range.collapse(false); // false表示折叠到末尾
+                selection.removeAllRanges();
+                selection.addRange(range);
+            },
+            
             // 失去焦点时停止编辑
             onBlur() {
+                // 保存内容
+                if (this.$refs.editableContent) {
+                    let html = this.$refs.editableContent.innerHTML;
+                    this.content = html.replace(/<br\s*\/?>/gi, '\n')
+                                     .replace(/&nbsp;/g, ' ')
+                                     .replace(/&lt;/g, '<')
+                                     .replace(/&gt;/g, '>')
+                                     .replace(/&amp;/g, '&')
+                                     .replace(/\u200B/g, ''); // 去除零宽空格
+                }
+                
                 this.isEditing = false;
                 this.adjustSize(); // 在完成编辑时再次调整大小
             },
+            
             // 文本输入时更新内容
             onInput(event) {
                 // 将HTML格式（包含<br>）转换为包含\n的纯文本
@@ -139,8 +180,28 @@
                                  .replace(/&amp;/g, '&')
                                  .replace(/\u200B/g, ''); // 去除零宽空格
                 
-                this.adjustSize();
+                // 避免频繁调整大小导致闪烁，使用防抖
+                this.debouncedAdjustSize();
             },
+            
+            // 防抖处理调整大小
+            debouncedAdjustSize() {
+                if (this.adjustSizeTimeout) {
+                    clearTimeout(this.adjustSizeTimeout);
+                }
+                this.adjustSizeTimeout = setTimeout(() => {
+                    this.adjustSize();
+                }, 300); // 300ms延迟
+            },
+            
+            // 粗体切换
+            toggleBold() {
+                this.isBold = !this.isBold;
+                if (this.$refs.editableContent) {
+                    this.$refs.editableContent.style.fontWeight = this.isBold ? 'bold' : 'normal';
+                }
+            },
+            
             startResize(handle) {
                 this.resizing = true;
                 this.resizeHandle = handle;
@@ -208,18 +269,23 @@
             },
             // 动态调整大小
             adjustSize() {
-                if (!this.$refs.editableContent) return;
-                
+                // 创建一个临时元素即使我们没有editableContent引用
                 // 设置一个临时元素以测量文本尺寸
                 const tempElement = document.createElement('div');
                 tempElement.style.position = 'absolute';
                 tempElement.style.visibility = 'hidden';
                 tempElement.style.width = 'auto';
                 tempElement.style.whiteSpace = 'pre-wrap';
+                
+                // 直接使用格式化后的内容，包括h3标签
+                tempElement.innerHTML = this.formattedContent;
+                
                 tempElement.style.fontSize = this.fontSize + 'px';
                 tempElement.style.fontFamily = this.fontFamily;
+                if (this.isBold) {
+                    tempElement.style.fontWeight = 'bold';
+                }
                 tempElement.style.padding = '5px';  // 减少测量元素的内边距
-                tempElement.innerHTML = this.content.replace(/\n/g, '<br>');
                 
                 document.body.appendChild(tempElement);
                 
@@ -291,6 +357,11 @@
     width: 100%;
 }
 
+.text-display h3 {
+    margin: 0;
+    padding: 0;
+}
+
 .text-content {
     outline: none;
     padding: 5px;
@@ -304,6 +375,39 @@
     text-align: left;
     width: 100%;
     background-color: transparent;
+}
+
+.heading-mode {
+    font-size: 1.17em !important;
+    font-weight: bold !important;
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
+}
+
+.text-toolbar {
+    position: absolute;
+    top: -30px;
+    left: 0;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 2px 5px;
+    display: flex;
+    z-index: 100;
+}
+
+.text-toolbar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 2px 5px;
+    margin: 0 2px;
+    border-radius: 2px;
+}
+
+.text-toolbar button.active {
+    background-color: #e0e0e0;
 }
 
 .resize-handle {

@@ -241,65 +241,16 @@
         methods: {
             // 添加文本框到画布
             addTextTool() {
-                const newText = {
-                    id: 'text-' + Date.now(),  // 添加唯一ID
-                    name: '文本框' + (this.canvasItems.texts.length + 1),  // 添加默认名称
-                    content: '这是一个文本框',
-                    position: {
-                        left: 350,
-                        top: 100,
-                        width: 200,
-                        height: 50,
-                        zIndex: ++this.currentZIndex
-                    }
-                };
-                this.canvasItems.texts.push(newText);
+                this.addComponentByType('text');
             },
             addImgTool() {
-                const newImage = {
-                    id: 'img-' + Date.now(),  // 添加唯一ID
-                    name: '图片' + (this.canvasItems.images.length + 1),  // 添加默认名称
-                    imageUrl: 'https://via.placeholder.com/150',
-                    position: {
-                        left: 350,
-                        top: 100,
-                        width: 150,
-                        height: 150,
-                        zIndex: ++this.currentZIndex
-                    }
-                };
-                this.canvasItems.images.push(newImage);
+                this.addComponentByType('image');
             },
             addHeritageTool() {
-                const newHeritage = {
-                    id: 'heritage-' + Date.now(),  // 添加唯一ID
-                    name: '遗产信息' + (this.canvasItems.heritages.length + 1),  // 添加默认名称
-                    position: {
-                        left: 350,
-                        top: 100,
-                        width: 300,
-                        height: 200,
-                        zIndex: ++this.currentZIndex
-                    },
-                    publicTime: '',
-                    items: []
-                };
-                this.canvasItems.heritages.push(newHeritage);
+                this.addComponentByType('heritage');
             },
             addMarkdownTool() {
-                const newMarkdown = {
-                    id: 'md-' + Date.now(),  // 添加唯一ID
-                    name: 'Markdown' + (this.canvasItems.markdowns.length + 1),  // 添加默认名称
-                    content: '# 新建Markdown\n请输入内容',
-                    position: {
-                        left: 350,
-                        top: 100,
-                        width: 400,
-                        height: 300,
-                        zIndex: ++this.currentZIndex
-                    }
-                };
-                this.canvasItems.markdowns.push(newMarkdown);
+                this.addComponentByType('markdown');
             },
             updateTextPosition(index, newPosition) {
                 this.canvasItems.texts[index].position = newPosition;
@@ -597,9 +548,7 @@
                     this.showNotificationMessage(response.data.answer);
                     
                     // 处理AI返回的操作指令
-                    if (response.data.action) {
-                        this.executeAction(response.data.action);
-                    }
+                    this.executeAction(response.data.action);
                     
                     // 关闭对话输入框并清空内容
                     this.showChatInput = false;
@@ -664,38 +613,211 @@
             
             // 执行AI返回的操作指令
             executeAction(action) {
-                const { targetType, targetId, targetIndex, params } = action;
-                
+                const { targetType, targetIndex, params } = action;
                 // 根据操作类型执行不同的操作
                 switch (action.action) {
                     case 'move':
                         // 如果提供了索引，使用索引，否则使用ID
                         if (targetIndex !== undefined) {
                             this.moveComponentByIndex(targetType, targetIndex, params);
-                        } else if (targetId) {
-                            this.moveComponent(targetType, targetId, params);
-                        }
+                        } 
                         break;
                     case 'edit':
                         if (targetIndex !== undefined) {
                             this.editComponentByIndex(targetType, targetIndex, params);
-                        } else if (targetId) {
-                            this.editComponent(targetType, targetId, params);
-                        }
+                        } 
                         break;
                     case 'delete':
                         if (targetIndex !== undefined) {
                             this.deleteComponentByIndex(targetType, targetIndex);
-                        } else if (targetId) {
-                            this.deleteComponentById(targetType, targetId);
-                        }
+                        } 
                         break;
                     case 'add':
                         this.addComponentByType(targetType, params);
                         break;
+                    case 'multi_add':
+                        // 处理多组件添加操作 - 始终使用components数组
+                        this.addMultipleComponents(action.components || []);
+                        break;
+                    case 'create_template':
+                        // 为了兼容后端可能返回的旧格式，转换为multi_add
+                        console.warn('已废弃的操作类型: create_template，请使用multi_add');
+                        if (action.components) {
+                            this.addMultipleComponents(action.components);
+                        } else {
+                            console.error('无效的模板指令: 缺少components字段');
+                        }
+                        break;
                     default:
                         console.warn('未知操作类型:', action.action);
                 }
+            },
+            
+            // 添加新的多组件添加方法
+            addMultipleComponents(components) {
+                if (!components || !Array.isArray(components)) {
+                    console.warn('无效的组件列表');
+                    return;
+                }
+                
+                // 遍历组件数组，按顺序添加每个组件
+                components.forEach(component => {
+                    const { type, params } = component;
+                    if (type && params) {
+                        this.addComponentByType(type, params);
+                    }
+                });
+            },
+            
+            // 添加新的智能位置计算功能
+            calculateOptimalPosition(componentType, componentSize = null) {
+                // 默认尺寸参考值
+                const defaultSizes = {
+                    'text': { width: 300, height: 50 },
+                    'markdown': { width: 500, height: 300 },
+                    'image': { width: 300, height: 200 },
+                    'heritage': { width: 500, height: 300 },
+                    'template': { width: 500, height: 450 }, // 用于模板的默认尺寸
+                };
+                
+                // 使用提供的尺寸或默认尺寸
+                const size = componentSize || defaultSizes[componentType] || defaultSizes['text'];
+                
+                // 如果画布为空，使用标准起始位置
+                if (this.isCanvasEmpty()) {
+                    return { left: 350, top: 100 };
+                }
+                
+                // 获取所有已有组件的位置信息
+                const occupiedAreas = this.getOccupiedAreas();
+                
+                // 尝试找出可用的空间区域
+                let availableSpace = this.findAvailableSpace(occupiedAreas, size);
+                
+                if (availableSpace) {
+                    return availableSpace;
+                }
+                
+                // 如果没有合适的空间，则放置在已有内容的下方
+                const maxBottom = Math.max(...occupiedAreas.map(area => area.bottom));
+                return { left: 350, top: maxBottom + 30 }; // 30px的间距
+            },
+            
+            // 判断画布是否为空
+            isCanvasEmpty() {
+                return (
+                    this.canvasItems.texts.length === 0 &&
+                    this.canvasItems.images.length === 0 &&
+                    this.canvasItems.heritages.length === 0 &&
+                    this.canvasItems.markdowns.length === 0
+                );
+            },
+            
+            // 获取所有已占用区域
+            getOccupiedAreas() {
+                // 收集所有组件的位置信息
+                const collectAreas = (items) => {
+                    return items.map(item => {
+                        const pos = item.position;
+                        return {
+                            left: pos.left,
+                            top: pos.top,
+                            right: pos.left + pos.width,
+                            bottom: pos.top + pos.height
+                        };
+                    });
+                };
+                
+                // 合并所有类型组件的区域
+                return [
+                    ...collectAreas(this.canvasItems.texts),
+                    ...collectAreas(this.canvasItems.images),
+                    ...collectAreas(this.canvasItems.heritages),
+                    ...collectAreas(this.canvasItems.markdowns)
+                ];
+            },
+            
+            // 查找可用空间
+            findAvailableSpace(occupiedAreas, newSize) {
+                if (occupiedAreas.length === 0) {
+                    return { left: 350, top: 100 };
+                }
+                
+                // 画布宽度和高度参考值
+                const canvasWidth = 1200;
+                const canvasHeight = 800;
+                
+                // 计算已占用区域的边界
+                const minLeft = Math.min(...occupiedAreas.map(area => area.left));
+                const maxRight = Math.max(...occupiedAreas.map(area => area.right));
+                const minTop = Math.min(...occupiedAreas.map(area => area.top));
+                const maxBottom = Math.max(...occupiedAreas.map(area => area.bottom));
+                
+                // 尝试的位置策略
+                const positions = [
+                    // 右侧空间
+                    { left: maxRight + 30, top: minTop },
+                    // 底部空间
+                    { left: minLeft, top: maxBottom + 30 },
+                    // 左侧空间（如果有足够空间）
+                    { left: Math.max(50, minLeft - newSize.width - 30), top: minTop },
+                    // 顶部空间（如果有足够空间）
+                    { left: minLeft, top: Math.max(50, minTop - newSize.height - 30) },
+                    // 中间位置（如果现有内容集中在边缘）
+                    { left: (minLeft + maxRight) / 2 - newSize.width / 2, top: (minTop + maxBottom) / 2 - newSize.height / 2 },
+                    // 右下角
+                    { left: maxRight + 30, top: maxBottom + 30 },
+                    // 如果都不行，使用固定位置
+                    { left: 350, top: maxBottom + 30 }
+                ];
+                
+                // 检查位置是否可用
+                for (const pos of positions) {
+                    // 确保不超出画布边界
+                    if (pos.left < 0 || pos.top < 0 || 
+                        pos.left + newSize.width > canvasWidth || 
+                        pos.top + newSize.height > canvasHeight) {
+                        continue;
+                    }
+                    
+                    // 检查是否与现有组件重叠
+                    const newArea = {
+                        left: pos.left,
+                        top: pos.top,
+                        right: pos.left + newSize.width,
+                        bottom: pos.top + newSize.height
+                    };
+                    
+                    if (!this.isOverlapping(newArea, occupiedAreas)) {
+                        return pos;
+                    }
+                }
+                
+                // 如果所有位置都不合适，返回画布下方
+                return { left: 350, top: maxBottom + 30 };
+            },
+            
+            // 检查区域是否重叠
+            isOverlapping(newArea, occupiedAreas) {
+                // 添加一些间距来避免组件挤在一起
+                const SPACING = 20;
+                const expandedNew = {
+                    left: newArea.left - SPACING,
+                    top: newArea.top - SPACING,
+                    right: newArea.right + SPACING,
+                    bottom: newArea.bottom + SPACING
+                };
+                
+                for (const area of occupiedAreas) {
+                    if (!(expandedNew.right < area.left || 
+                          expandedNew.left > area.right || 
+                          expandedNew.bottom < area.top || 
+                          expandedNew.top > area.bottom)) {
+                        return true; // 有重叠
+                    }
+                }
+                
+                return false;
             },
             
             // 根据索引移动组件
@@ -798,140 +920,123 @@
                     }
                 }
             },
-            
-            // 移动组件
-            moveComponent(type, id, params) {
-                const { left, top, width, height } = params;
-                const componentList = this.getComponentList(type);
-                const index = this.findComponentIndex(type, id);
-                
-                if (index !== -1) {
-                    const newPosition = { ...componentList[index].position };
-                    
-                    if (left !== undefined) newPosition.left = left;
-                    if (top !== undefined) newPosition.top = top;
-                    if (width !== undefined) newPosition.width = width;
-                    if (height !== undefined) newPosition.height = height;
-                    
-                    // 根据组件类型调用相应的更新方法
-                    switch (type) {
-                        case 'text':
-                            this.updateTextPosition(index, newPosition);
-                            break;
-                        case 'image':
-                            this.updateImagePosition(index, newPosition);
-                            break;
-                        case 'heritage':
-                            this.updateHeritagePosition(index, newPosition);
-                            break;
-                        case 'markdown':
-                            this.updateMarkdownPosition(index, newPosition);
-                            break;
-                    }
-                }
-            },
-            
-            // 编辑组件内容
-            editComponent(type, id, params) {
-                const index = this.findComponentIndex(type, id);
-                
-                if (index !== -1) {
-                    if (params.name) {
-                        switch (type) {
-                            case 'text':
-                                this.updateTextName(index, params.name);
-                                break;
-                            case 'image':
-                                this.updateImageName(index, params.name);
-                                break;
-                            case 'heritage':
-                                this.updateHeritageName(index, params.name);
-                                break;
-                            case 'markdown':
-                                this.updateMarkdownName(index, params.name);
-                                break;
-                        }
-                    }
-                    
-                    if (params.content && (type === 'text' || type === 'markdown')) {
-                        if (type === 'text') {
-                            this.canvasItems.texts[index].content = params.content;
-                        } else {
-                            this.updateMarkdownContent(index, params.content);
-                        }
-                    }
-                    
-                    if (params.imageUrl && type === 'image') {
-                        this.canvasItems.images[index].imageUrl = params.imageUrl;
-                    }
-                    
-                    if (type === 'heritage' && (params.publicTime || params.items)) {
-                        const content = {
-                            publicTime: params.publicTime || this.canvasItems.heritages[index].publicTime,
-                            items: params.items || this.canvasItems.heritages[index].items
-                        };
-                        this.updateHeritageContent(index, content);
-                    }
-                }
-            },
-            
-            // 根据ID删除组件
-            deleteComponentById(type, id) {
-                const index = this.findComponentIndex(type, id);
-                if (index !== -1) {
-                    this.deleteComponent(type, index);
-                }
-            },
+             
+         
             
             // 添加新组件
             addComponentByType(type, params) {
+                // 根据组件类型和已有组件计算最佳位置
+                let position;
+                
+                // 如果没有提供位置或位置不完整，计算最优位置
+                if (!params || !params.position || 
+                    (params.position && Object.keys(params.position).length < 4)) {
+                    
+                    // 根据组件类型确定合适的尺寸
+                    const componentSize = {
+                        width: params?.position?.width || this.getDefaultSize(type).width,
+                        height: params?.position?.height || this.getDefaultSize(type).height
+                    };
+                    
+                    // 计算最佳位置
+                    const optimalPos = this.calculateOptimalPosition(type, componentSize);
+                    
+                    // 构建完整的position对象
+                    position = {
+                        left: params?.position?.left || optimalPos.left,
+                        top: params?.position?.top || optimalPos.top,
+                        width: componentSize.width,
+                        height: componentSize.height,
+                        zIndex: ++this.currentZIndex
+                    };
+                } else {
+                    // 使用提供的位置，但确保有zIndex
+                    position = {
+                        ...params.position,
+                        zIndex: params.position.zIndex || ++this.currentZIndex
+                    };
+                }
+                
                 switch (type) {
+                    case 'text': {
+                        // 创建新的文本对象
+                        const newText = {
+                            id: 'text-' + Date.now(),
+                            name: params?.name || '文本框' + (this.canvasItems.texts.length + 1),
+                            content: params?.content || '这是一个文本框',
+                            position: position
+                        };
+                        
+                        // 添加到画布
+                        this.canvasItems.texts.push(newText);
+                        
+                        // 返回索引
+                        return this.canvasItems.texts.length - 1;
+                    }
+                    case 'image': {
+                        // 创建新的图片对象
+                        const newImage = {
+                            id: 'img-' + Date.now(),
+                            name: params?.name || '图片' + (this.canvasItems.images.length + 1),
+                            imageUrl: params?.imageUrl || 'https://via.placeholder.com/300',
+                            position: position
+                        };
+                        
+                        // 添加到画布
+                        this.canvasItems.images.push(newImage);
+                        
+                        // 返回索引
+                        return this.canvasItems.images.length - 1;
+                    }
+                    case 'heritage': {
+                        // 创建新的遗产对象
+                        const newHeritage = {
+                            id: 'heritage-' + Date.now(),
+                            name: params?.name || '遗产信息' + (this.canvasItems.heritages.length + 1),
+                            position: position,
+                            publicTime: params?.publicTime || '',
+                            items: params?.items || []
+                        };
+                        
+                        // 添加到画布
+                        this.canvasItems.heritages.push(newHeritage);
+                        
+                        // 返回索引
+                        return this.canvasItems.heritages.length - 1;
+                    }
+                    case 'markdown': {
+                        // 创建新的Markdown对象
+                        const newMarkdown = {
+                            id: 'md-' + Date.now(),
+                            name: params?.name || 'Markdown' + (this.canvasItems.markdowns.length + 1),
+                            content: params?.content || '# 新建Markdown\n请输入内容',
+                            position: position
+                        };
+                        
+                        // 添加到画布
+                        this.canvasItems.markdowns.push(newMarkdown);
+                        
+                        // 返回索引
+                        return this.canvasItems.markdowns.length - 1;
+                    }
+                }
+                
+                return -1; // 如果添加失败
+            },
+            
+            // 获取不同组件类型的默认尺寸
+            getDefaultSize(type) {
+                switch(type) {
                     case 'text':
-                        this.addTextTool();
-                        if (params.content) {
-                            const index = this.canvasItems.texts.length - 1;
-                            this.canvasItems.texts[index].content = params.content;
-                            if (params.position) {
-                                this.updateTextPosition(index, params.position);
-                            }
-                        }
-                        break;
+                        return { width: 300, height: 50 };
                     case 'image':
-                        this.addImgTool();
-                        if (params.imageUrl) {
-                            const index = this.canvasItems.images.length - 1;
-                            this.canvasItems.images[index].imageUrl = params.imageUrl;
-                            if (params.position) {
-                                this.updateImagePosition(index, params.position);
-                            }
-                        }
-                        break;
+                        return { width: 300, height: 200 };
                     case 'heritage':
-                        this.addHeritageTool();
-                        {
-                            const heritageIndex = this.canvasItems.heritages.length - 1;
-                            if (params.position) {
-                                this.updateHeritagePosition(heritageIndex, params.position);
-                            }
-                            if (params.publicTime || params.items) {
-                                const content = {
-                                    publicTime: params.publicTime || '',
-                                    items: params.items || []
-                                };
-                                this.updateHeritageContent(heritageIndex, content);
-                            }
-                        }
-                        break;
+                        return { width: 500, height: 300 };
                     case 'markdown':
-                        this.addMarkdownTool();
-                        if (params.content) {
-                            const index = this.canvasItems.markdowns.length - 1;
-                            this.updateMarkdownContent(index, params.content);
-                            if (params.position) {
-                                this.updateMarkdownPosition(index, params.position);
-                            }
-                        }
-                        break;
+                        return { width: 500, height: 300 };
+                    default:
+                        return { width: 300, height: 200 };
                 }
             },
             
@@ -988,7 +1093,7 @@
                     
                     // 获取图片URL
                     const imageUrl = data.data.path;
-                    this.uploadedImageUrl = 'http://101.132.43.211:8090' + imageUrl;
+                    this.uploadedImageUrl = '101.132.43.211' + imageUrl;
                     
                     // 尝试复制链接到剪贴板
                     await this.copyToClipboard(this.uploadedImageUrl);

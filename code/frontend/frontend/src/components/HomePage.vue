@@ -41,7 +41,6 @@
                         :key="'img-' + imageIndex"
                         :initialImageUrl="image.imageUrl"
                         :initialPosition="image.position"
-                        @updateImage="(newUrl) => updateImageUrl(currentIndex, imageIndex, newUrl)"
                     />
 
                     <!-- 渲染遗产组件 -->
@@ -239,27 +238,7 @@
                 }
             },
 
-            updateImageUrl(canvasIndex, imageIndex, newUrl) {
-                console.log(`更新图片URL: 画布${canvasIndex}, 图片${imageIndex}, 新URL: ${newUrl}`);
-                if (this.canvasItems[canvasIndex] && this.canvasItems[canvasIndex].images[imageIndex]) {
-                    alert(newUrl);
-                    this.canvasItems[canvasIndex].images[imageIndex].imageUrl = newUrl;
-                    
-                    // 如果需要，可以在这里添加保存到后端的逻辑
-                    // this.saveCanvasToBackend(this.canvasItems[canvasIndex]);
-                }
-            },
-
-            // 保存画布数据到后端的方法（如果需要）
-            saveCanvasToBackend(canvasData) {
-                request.post('/user/canvas/save', { canvasData })
-                    .then(response => {
-                        console.log('画布保存成功', response);
-                    })
-                    .catch(error => {
-                        console.error('保存画布失败:', error);
-                    });
-            }
+            
         },
     };
 </script>

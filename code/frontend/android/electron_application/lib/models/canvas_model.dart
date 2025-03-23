@@ -102,11 +102,15 @@ class PositionModel {
   });
 
   factory PositionModel.fromJson(Map<String, dynamic> json) {
+    // 高度增强系数，直接在模型层放大高度
+    const double heightEnhancementFactor = 5;
+    const double widthEnhancementFactor = 1.5;
     return PositionModel(
       left: (json['left'] ?? 0).toDouble(),
       top: (json['top'] ?? 0).toDouble(),
-      width: (json['width'] ?? 200).toDouble(),
-      height: (json['height'] ?? 100).toDouble(),
+      width: (json['width'] ?? 200).toDouble() * widthEnhancementFactor,
+      // 直接对高度应用增强系数
+      height: ((json['height'] ?? 100).toDouble()) * heightEnhancementFactor,
       zIndex: json['z_index'] ?? 0,
     );
   }

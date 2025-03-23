@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:electron_application/models/canvas_model.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
@@ -52,27 +53,42 @@ class _MarkdownItemState extends State<MarkdownItem> {
     _position = widget.position;
     _textController.text = _content;
 
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && _isEditing && !_isPreview) {
-        _updateContent();
-      }
-    });
+    // 添加焦点监听，确保在失去焦点时保存内容
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  // 处理焦点变化
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus && _isEditing && !_isPreview) {
+      _updateContent();
+    }
   }
 
   @override
   void didUpdateWidget(MarkdownItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.content != widget.content) {
-      _content = widget.content;
-      _textController.text = _content;
+    // 只有当内容确实发生变化时才更新，避免光标位置重置
+    if (oldWidget.content != widget.content && _content != widget.content) {
+      setState(() {
+        _content = widget.content;
+        // 只在不编辑时更新文本控制器，避免干扰用户输入
+        if (!_isEditing) {
+          _textController.text = _content;
+        }
+      });
     }
+    // 更新位置信息
     if (oldWidget.position != widget.position) {
-      _position = widget.position;
+      setState(() {
+        _position = widget.position;
+      });
     }
   }
 
   @override
   void dispose() {
+    // 移除焦点监听器
+    _focusNode.removeListener(_handleFocusChange);
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -80,32 +96,61 @@ class _MarkdownItemState extends State<MarkdownItem> {
 
   void _editMarkdown() {
     if (widget.readonly) return;
-    setState(() {
-      _isEditing = true;
-      _isPreview = false;
-      _textController.text = _content;
-    });
 
-    // 延迟获取焦点，确保UI更新完成
-    Future.delayed(const Duration(milliseconds: 50), () {
-      _focusNode.requestFocus();
-    });
+    try {
+      setState(() {
+        _isEditing = true;
+        _isPreview = false;
+        // 确保文本控制器内容是最新的
+        _textController.text = _content;
+      });
+
+      // 延迟获取焦点，确保UI更新完成
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _focusNode.requestFocus();
+        }
+      });
+    } catch (e) {
+      print('Markdown编辑出错: $e');
+      // 出错时尝试恢复到预览状态
+      setState(() {
+        _isEditing = false;
+        _isPreview = false;
+      });
+    }
   }
 
   void _togglePreview() {
     setState(() {
       _isPreview = !_isPreview;
+      // 如果从预览模式切回编辑模式，重新获取焦点
+      if (!_isPreview && _isEditing) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _focusNode.requestFocus();
+          }
+        });
+      }
     });
   }
 
   void _updateContent() {
-    final newContent = _textController.text;
-    setState(() {
-      _content = newContent;
-    });
+    try {
+      final newContent = _textController.text;
+      setState(() {
+        _content = newContent;
+      });
 
-    if (widget.onUpdate != null) {
-      widget.onUpdate!(newContent);
+      if (widget.onUpdate != null) {
+        widget.onUpdate!(newContent);
+      }
+    } catch (e) {
+      print('更新Markdown内容出错: $e');
+      // 防止UI状态不一致
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -224,9 +269,25 @@ class _MarkdownItemState extends State<MarkdownItem> {
     }
   }
 
-  // 处理Tab键
+  // 处理键盘事件
   void _handleKeyPress(RawKeyEvent event) {
-    // 实现Tab键处理逻辑
+    // Tab键处理，用于插入Tab符而不是切换焦点
+    if (event is RawKeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.tab) {
+      // 在光标位置插入制表符
+      final currentText = _textController.text;
+      final selection = _textController.selection;
+      final newText = currentText.replaceRange(
+          selection.start, selection.end, '    ' // 使用4个空格代替Tab
+          );
+
+      _textController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(
+          offset: selection.baseOffset + 4,
+        ),
+      );
+    }
   }
 
   @override
@@ -244,23 +305,21 @@ class _MarkdownItemState extends State<MarkdownItem> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(
-                  color:
-                      _isEditing
-                          ? Colors.blue.withOpacity(0.5)
-                          : Colors.grey.withOpacity(0.3),
+                  color: _isEditing
+                      ? Colors.blue.withOpacity(0.5)
+                      : Colors.grey.withOpacity(0.3),
                   width: 1,
                 ),
                 borderRadius: BorderRadius.circular(4),
-                boxShadow:
-                    _isEditing
-                        ? [
-                          BoxShadow(
-                            color: Colors.blue.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ]
-                        : null,
+                boxShadow: _isEditing
+                    ? [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : null,
               ),
               child: Column(
                 children: [
@@ -308,10 +367,11 @@ class _MarkdownItemState extends State<MarkdownItem> {
                               ),
                               TextButton(
                                 onPressed: () {
+                                  // 先更新内容，再切换状态
+                                  _updateContent();
                                   setState(() {
                                     _isEditing = false;
                                   });
-                                  _updateContent();
                                 },
                                 style: TextButton.styleFrom(
                                   minimumSize: Size.zero,
@@ -336,19 +396,17 @@ class _MarkdownItemState extends State<MarkdownItem> {
                   // 内容区域
                   Expanded(
                     child: GestureDetector(
-                      onTap:
-                          !_isEditing && !widget.readonly
-                              ? _editMarkdown
-                              : null,
+                      onTap: !_isEditing && !widget.readonly
+                          ? _editMarkdown
+                          : null,
                       onPanStart: _onDragStart,
                       onPanUpdate: _onDragUpdate,
                       onPanEnd: _onDragEnd,
                       child: Container(
                         width: _position.width,
-                        height:
-                            _isEditing
-                                ? _position.height - 30
-                                : _position.height, // 编辑模式减去标题栏高度
+                        height: _isEditing
+                            ? _position.height - 30
+                            : _position.height, // 编辑模式减去标题栏高度
                         padding: const EdgeInsets.all(8),
                         child: _buildContent(),
                       ),
@@ -359,17 +417,16 @@ class _MarkdownItemState extends State<MarkdownItem> {
             ),
 
             // 调整大小控制点
-            if (!widget.readonly) ...[
+            if (!widget.readonly && !_isEditing) ...[
               // 左上角
               Positioned(
                 left: -5,
                 top: -5,
                 child: GestureDetector(
-                  onPanStart:
-                      (details) =>
-                          _startResize('topLeft', details.globalPosition),
-                  onPanUpdate:
-                      (details) => _onResizeUpdate(details.globalPosition),
+                  onPanStart: (details) =>
+                      _startResize('topLeft', details.globalPosition),
+                  onPanUpdate: (details) =>
+                      _onResizeUpdate(details.globalPosition),
                   onPanEnd: (_) => _stopResize(),
                   child: Container(
                     width: 10,
@@ -390,11 +447,10 @@ class _MarkdownItemState extends State<MarkdownItem> {
                 right: -5,
                 top: -5,
                 child: GestureDetector(
-                  onPanStart:
-                      (details) =>
-                          _startResize('topRight', details.globalPosition),
-                  onPanUpdate:
-                      (details) => _onResizeUpdate(details.globalPosition),
+                  onPanStart: (details) =>
+                      _startResize('topRight', details.globalPosition),
+                  onPanUpdate: (details) =>
+                      _onResizeUpdate(details.globalPosition),
                   onPanEnd: (_) => _stopResize(),
                   child: Container(
                     width: 10,
@@ -415,11 +471,10 @@ class _MarkdownItemState extends State<MarkdownItem> {
                 left: -5,
                 bottom: -5,
                 child: GestureDetector(
-                  onPanStart:
-                      (details) =>
-                          _startResize('bottomLeft', details.globalPosition),
-                  onPanUpdate:
-                      (details) => _onResizeUpdate(details.globalPosition),
+                  onPanStart: (details) =>
+                      _startResize('bottomLeft', details.globalPosition),
+                  onPanUpdate: (details) =>
+                      _onResizeUpdate(details.globalPosition),
                   onPanEnd: (_) => _stopResize(),
                   child: Container(
                     width: 10,
@@ -440,11 +495,10 @@ class _MarkdownItemState extends State<MarkdownItem> {
                 right: -5,
                 bottom: -5,
                 child: GestureDetector(
-                  onPanStart:
-                      (details) =>
-                          _startResize('bottomRight', details.globalPosition),
-                  onPanUpdate:
-                      (details) => _onResizeUpdate(details.globalPosition),
+                  onPanStart: (details) =>
+                      _startResize('bottomRight', details.globalPosition),
+                  onPanUpdate: (details) =>
+                      _onResizeUpdate(details.globalPosition),
                   onPanEnd: (_) => _stopResize(),
                   child: Container(
                     width: 10,
@@ -468,6 +522,7 @@ class _MarkdownItemState extends State<MarkdownItem> {
 
   Widget _buildContent() {
     if (_isEditing && !_isPreview) {
+      // 编辑模式
       return RawKeyboardListener(
         focusNode: _focusNode,
         onKey: _handleKeyPress,
@@ -476,6 +531,8 @@ class _MarkdownItemState extends State<MarkdownItem> {
           focusNode: _focusNode,
           maxLines: null,
           expands: true,
+          keyboardType: TextInputType.multiline,
+          textInputAction: TextInputAction.newline,
           decoration: const InputDecoration(
             border: InputBorder.none,
             contentPadding: EdgeInsets.zero,
@@ -485,26 +542,38 @@ class _MarkdownItemState extends State<MarkdownItem> {
         ),
       );
     } else {
-      return Markdown(
-        data: _content,
-        shrinkWrap: true,
-        physics: const ClampingScrollPhysics(),
-        styleSheet: MarkdownStyleSheet(
-          h1: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          h2: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          h3: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          p: const TextStyle(fontSize: 14),
-          code: const TextStyle(
-            fontSize: 12,
-            backgroundColor: Color(0xFFf5f5f5),
-            fontFamily: 'monospace',
+      // 预览模式或非编辑模式
+      try {
+        return Markdown(
+          data: _content,
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          styleSheet: MarkdownStyleSheet(
+            h1: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            h2: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            h3: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            p: const TextStyle(fontSize: 14),
+            code: const TextStyle(
+              fontSize: 12,
+              backgroundColor: Color(0xFFf5f5f5),
+              fontFamily: 'monospace',
+            ),
+            codeblockDecoration: BoxDecoration(
+              color: const Color(0xFFf5f5f5),
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-          codeblockDecoration: BoxDecoration(
-            color: const Color(0xFFf5f5f5),
-            borderRadius: BorderRadius.circular(4),
+        );
+      } catch (e) {
+        // 渲染Markdown出错时显示原始文本
+        print('Markdown渲染错误: $e');
+        return SingleChildScrollView(
+          child: Text(
+            _content,
+            style: const TextStyle(fontSize: 14),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 }

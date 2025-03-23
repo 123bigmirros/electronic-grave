@@ -842,50 +842,15 @@ class _GravePaintScreenState extends State<GravePaintScreen> {
 
                 // 使用GestureDetector包装整个画布区域，支持平移和缩放
                 GestureDetector(
-                  // 添加画布平移手势
-                  onPanStart: (details) {
-                    if (!_isDraggingCanvas) {
-                      _isDraggingCanvas = true;
-                      _lastDragPosition = details.globalPosition;
-                    }
-                  },
-                  onPanUpdate: (details) {
-                    if (_isDraggingCanvas) {
-                      setState(() {
-                        final delta =
-                            details.globalPosition - _lastDragPosition;
-                        _canvasOffset += delta;
-                        _lastDragPosition = details.globalPosition;
-
-                        // 限制平移范围，防止画布移出视野
-                        final maxOffsetX = canvasWidth * _canvasScale * 0.5;
-                        final maxOffsetY = canvasHeight * _canvasScale * 0.5;
-
-                        if (_canvasOffset.dx > maxOffsetX) {
-                          _canvasOffset = Offset(maxOffsetX, _canvasOffset.dy);
-                        }
-                        if (_canvasOffset.dx < -maxOffsetX) {
-                          _canvasOffset = Offset(-maxOffsetX, _canvasOffset.dy);
-                        }
-                        if (_canvasOffset.dy > maxOffsetY) {
-                          _canvasOffset = Offset(_canvasOffset.dx, maxOffsetY);
-                        }
-                        if (_canvasOffset.dy < -maxOffsetY) {
-                          _canvasOffset = Offset(_canvasOffset.dx, -maxOffsetY);
-                        }
-                      });
-                    }
-                  },
-                  onPanEnd: (_) {
-                    _isDraggingCanvas = false;
-                  },
-                  // 添加画布缩放手势
+                  // 移除冗余的平移手势处理
                   onScaleStart: (details) {
+                    _isDraggingCanvas = true;
                     _lastDragPosition = details.focalPoint;
                   },
                   onScaleUpdate: (details) {
-                    if (details.scale != 1.0) {
-                      setState(() {
+                    setState(() {
+                      // 处理缩放
+                      if (details.scale != 1.0) {
                         // 根据手势更新画布缩放
                         final newScale = (_canvasScale * details.scale)
                             .clamp(_minScale, _maxScale);
@@ -904,17 +869,39 @@ class _GravePaintScreenState extends State<GravePaintScreen> {
                               focalPointDelta * (1.0 - details.scale);
                           _lastDragPosition = focalPoint;
                         }
-                      });
-                    } else {
-                      // 处理拖动
-                      final delta = details.focalPoint - _lastDragPosition;
-                      if (delta.distance > 0) {
-                        setState(() {
+                      } else {
+                        // 处理拖动
+                        final delta = details.focalPoint - _lastDragPosition;
+                        if (delta.distance > 0) {
                           _canvasOffset += delta;
                           _lastDragPosition = details.focalPoint;
-                        });
+
+                          // 限制平移范围，防止画布移出视野
+                          final maxOffsetX = canvasWidth * _canvasScale * 0.5;
+                          final maxOffsetY = canvasHeight * _canvasScale * 0.5;
+
+                          if (_canvasOffset.dx > maxOffsetX) {
+                            _canvasOffset =
+                                Offset(maxOffsetX, _canvasOffset.dy);
+                          }
+                          if (_canvasOffset.dx < -maxOffsetX) {
+                            _canvasOffset =
+                                Offset(-maxOffsetX, _canvasOffset.dy);
+                          }
+                          if (_canvasOffset.dy > maxOffsetY) {
+                            _canvasOffset =
+                                Offset(_canvasOffset.dx, maxOffsetY);
+                          }
+                          if (_canvasOffset.dy < -maxOffsetY) {
+                            _canvasOffset =
+                                Offset(_canvasOffset.dx, -maxOffsetY);
+                          }
+                        }
                       }
-                    }
+                    });
+                  },
+                  onScaleEnd: (_) {
+                    _isDraggingCanvas = false;
                   },
                   child: Stack(
                     children: [
@@ -935,203 +922,7 @@ class _GravePaintScreenState extends State<GravePaintScreen> {
                         ),
                       ),
 
-                      // 组件索引标签 - 文本
-                      ...canvas.texts.asMap().entries.map(
-                        (entry) {
-                          final index = entry.key;
-                          final item = entry.value;
-                          // 计算屏幕上的实际位置（考虑缩放和平移）
-                          final screenX = item.position.left *
-                                  scaleFactor *
-                                  _canvasScale +
-                              (horizontalPadding > 0 ? horizontalPadding : 0) +
-                              _canvasOffset.dx;
-                          final screenY =
-                              item.position.top * scaleFactor * _canvasScale +
-                                  (verticalPadding > 0 ? verticalPadding : 0) +
-                                  _canvasOffset.dy;
-
-                          return Positioned(
-                            left: screenX - 20 * _canvasScale,
-                            top: screenY - 28 * _canvasScale,
-                            child: Transform.scale(
-                              scale: _canvasScale,
-                              alignment: Alignment.topLeft,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  '文本[${index + 1}]',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      // 组件索引标签 - 图片
-                      ...canvas.images.asMap().entries.map(
-                        (entry) {
-                          final index = entry.key;
-                          final item = entry.value;
-                          final screenX = item.position.left *
-                                  scaleFactor *
-                                  _canvasScale +
-                              (horizontalPadding > 0 ? horizontalPadding : 0) +
-                              _canvasOffset.dx;
-                          final screenY =
-                              item.position.top * scaleFactor * _canvasScale +
-                                  (verticalPadding > 0 ? verticalPadding : 0) +
-                                  _canvasOffset.dy;
-
-                          return Positioned(
-                            left: screenX - 20 * _canvasScale,
-                            top: screenY - 28 * _canvasScale,
-                            child: Transform.scale(
-                              scale: _canvasScale,
-                              alignment: Alignment.topLeft,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  '图片[${index + 1}]',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      // 组件索引标签 - 遗产
-                      ...canvas.heritages.asMap().entries.map(
-                        (entry) {
-                          final index = entry.key;
-                          final item = entry.value;
-                          final screenX = item.position.left *
-                                  scaleFactor *
-                                  _canvasScale +
-                              (horizontalPadding > 0 ? horizontalPadding : 0) +
-                              _canvasOffset.dx;
-                          final screenY =
-                              item.position.top * scaleFactor * _canvasScale +
-                                  (verticalPadding > 0 ? verticalPadding : 0) +
-                                  _canvasOffset.dy;
-
-                          return Positioned(
-                            left: screenX - 20 * _canvasScale,
-                            top: screenY - 28 * _canvasScale,
-                            child: Transform.scale(
-                              scale: _canvasScale,
-                              alignment: Alignment.topLeft,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  '遗产[${index + 1}]',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      // 组件索引标签 - Markdown
-                      ...canvas.markdowns.asMap().entries.map(
-                        (entry) {
-                          final index = entry.key;
-                          final item = entry.value;
-                          final screenX = item.position.left *
-                                  scaleFactor *
-                                  _canvasScale +
-                              (horizontalPadding > 0 ? horizontalPadding : 0) +
-                              _canvasOffset.dx;
-                          final screenY =
-                              item.position.top * scaleFactor * _canvasScale +
-                                  (verticalPadding > 0 ? verticalPadding : 0) +
-                                  _canvasOffset.dy;
-
-                          return Positioned(
-                            left: screenX - 20 * _canvasScale,
-                            top: screenY - 28 * _canvasScale,
-                            child: Transform.scale(
-                              scale: _canvasScale,
-                              alignment: Alignment.topLeft,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.purple.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  'MD[${index + 1}]',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
+                      // 先渲染所有组件内容
                       // 文本组件
                       ...canvas.texts.map(
                         (item) {
@@ -1433,6 +1224,204 @@ class _GravePaintScreenState extends State<GravePaintScreen> {
                                 onDelete: () {
                                   canvasProvider.removeHeritageItem(item);
                                 },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 最后渲染所有组件标签，确保显示在最上层
+                      // 组件索引标签 - 文本
+                      ...canvas.texts.asMap().entries.map(
+                        (entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          // 计算屏幕上的实际位置（考虑缩放和平移）
+                          final screenX = item.position.left *
+                                  scaleFactor *
+                                  _canvasScale +
+                              (horizontalPadding > 0 ? horizontalPadding : 0) +
+                              _canvasOffset.dx;
+                          final screenY =
+                              item.position.top * scaleFactor * _canvasScale +
+                                  (verticalPadding > 0 ? verticalPadding : 0) +
+                                  _canvasOffset.dy;
+
+                          return Positioned(
+                            left: screenX - 20 * _canvasScale,
+                            top: screenY - 28 * _canvasScale,
+                            child: Transform.scale(
+                              scale: _canvasScale,
+                              alignment: Alignment.topLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '文本[${index + 1}]',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 组件索引标签 - 图片
+                      ...canvas.images.asMap().entries.map(
+                        (entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          final screenX = item.position.left *
+                                  scaleFactor *
+                                  _canvasScale +
+                              (horizontalPadding > 0 ? horizontalPadding : 0) +
+                              _canvasOffset.dx;
+                          final screenY =
+                              item.position.top * scaleFactor * _canvasScale +
+                                  (verticalPadding > 0 ? verticalPadding : 0) +
+                                  _canvasOffset.dy;
+
+                          return Positioned(
+                            left: screenX - 20 * _canvasScale,
+                            top: screenY - 28 * _canvasScale,
+                            child: Transform.scale(
+                              scale: _canvasScale,
+                              alignment: Alignment.topLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '图片[${index + 1}]',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 组件索引标签 - 遗产
+                      ...canvas.heritages.asMap().entries.map(
+                        (entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          final screenX = item.position.left *
+                                  scaleFactor *
+                                  _canvasScale +
+                              (horizontalPadding > 0 ? horizontalPadding : 0) +
+                              _canvasOffset.dx;
+                          final screenY =
+                              item.position.top * scaleFactor * _canvasScale +
+                                  (verticalPadding > 0 ? verticalPadding : 0) +
+                                  _canvasOffset.dy;
+
+                          return Positioned(
+                            left: screenX - 20 * _canvasScale,
+                            top: screenY - 28 * _canvasScale,
+                            child: Transform.scale(
+                              scale: _canvasScale,
+                              alignment: Alignment.topLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '遗产[${index + 1}]',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 组件索引标签 - Markdown
+                      ...canvas.markdowns.asMap().entries.map(
+                        (entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          final screenX = item.position.left *
+                                  scaleFactor *
+                                  _canvasScale +
+                              (horizontalPadding > 0 ? horizontalPadding : 0) +
+                              _canvasOffset.dx;
+                          final screenY =
+                              item.position.top * scaleFactor * _canvasScale +
+                                  (verticalPadding > 0 ? verticalPadding : 0) +
+                                  _canvasOffset.dy;
+
+                          return Positioned(
+                            left: screenX - 20 * _canvasScale,
+                            top: screenY - 28 * _canvasScale,
+                            child: Transform.scale(
+                              scale: _canvasScale,
+                              alignment: Alignment.topLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'MD[${index + 1}]',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                           );

@@ -25,6 +25,7 @@
       alt="Image"
       class="img-content"
       @click="openImageSelector"
+      @error="handleImageError"
     />
     <input
       v-if="isEditing"
@@ -255,7 +256,16 @@ export default {
       if (!this.isEditing) {  // 只在非编辑状态下允许删除
         this.$emit('delete');
       }
-    }
+    },
+
+    // 处理图片加载错误
+    handleImageError() {
+      console.error('图片加载失败:', this.imageUrl);
+      // 可以设置为默认图片
+      if (this.imageUrl !== this.initialImageUrl) {
+        this.imageUrl = this.initialImageUrl;
+      }
+    },
   }
 };
 </script>
@@ -273,7 +283,7 @@ export default {
 .img-content {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 5px;
   cursor: pointer;
   z-index: 1;
