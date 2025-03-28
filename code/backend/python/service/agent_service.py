@@ -154,7 +154,7 @@ class AgentService:
         
         # 定义画布的固定边界区域
         canvas_boundary = {
-            'min_left': 50,   # 左边界
+            'min_left': 350,   # 左边界
             'min_top': 50,    # 上边界
             'max_right': 960, # 右边界
             'max_bottom': 700 # 下边界

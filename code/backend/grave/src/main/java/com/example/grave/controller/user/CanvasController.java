@@ -1,7 +1,6 @@
 package com.example.grave.controller.user;
 
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,12 +17,8 @@ import com.example.grave.common.context.BaseContext;
 import com.example.grave.common.result.Result;
 import com.example.grave.pojo.dto.CanvasDTO;
 import com.example.grave.pojo.entity.Heritage;
-import com.example.grave.pojo.entity.ImageBox;
-import com.example.grave.pojo.entity.MarkdownBox;
-import com.example.grave.pojo.entity.TextBox;
 import com.example.grave.pojo.vo.CanvasVO;
 import com.example.grave.service.CanvasService;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.None;
 import com.example.grave.pojo.entity.HeritageItem;
 
 

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const request_py = axios.create({
-    baseURL: 'http://101.132.43.211:5002',
+    baseURL: 'http://localhost:5002',
     timeout: 5000,
     headers: {
         'Content-Type': 'application/json'

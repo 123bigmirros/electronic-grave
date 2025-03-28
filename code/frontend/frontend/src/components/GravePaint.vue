@@ -1093,7 +1093,7 @@
                     
                     // 获取图片URL
                     const imageUrl = data.data.path;
-                    this.uploadedImageUrl = '101.132.43.211' + imageUrl;
+                    this.uploadedImageUrl = 'localhost' + imageUrl;
                     
                     // 尝试复制链接到剪贴板
                     await this.copyToClipboard(this.uploadedImageUrl);
