@@ -28,6 +28,9 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 添加个人助手组件 -->
+        <PersonalAssistant :userId="userId" />
     </div>
 </template>
 
@@ -35,15 +38,19 @@
 import request from '../utils/request';
 import request_py from '../utils/requests_py';
 import SearchBox from './SearchBox.vue';
+import PersonalAssistant from './PersonalAssistant.vue';
+
 export default {
     name: 'PersonalPage',
     components: {
-        SearchBox
+        SearchBox,
+        PersonalAssistant
     },
     data() {
         return {
             username: '',
-            canvasList: []
+            canvasList: [],
+            userId: ''
         };
     },
     methods: {
@@ -138,6 +145,8 @@ export default {
             this.$router.push('/login');
             return;
         }
+        
+        this.userId = userId;
 
         // 获取用户信息和画布列表
         this.getUserInfo();

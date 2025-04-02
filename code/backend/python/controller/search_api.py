@@ -4,6 +4,7 @@ from service.canvas_processor import CanvasProcessor
 from service.message_service import MessageService
 from service.canvas_message_service import CanvasMessageService
 from service.agent_service import AgentService
+from service.personal_message_service import PersonalMessageService
 import json
 import os
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ processor = CanvasProcessor()
 message_service = MessageService(None) 
 canvas_message_service = CanvasMessageService()
 agent_service = AgentService()  # 创建AgentService实例
+personal_message_service = PersonalMessageService(processor)  # 创建PersonalMessageService实例
 
 @app.route('/api/canvas/embedding', methods=['POST'])
 def save_embeddings():
@@ -115,6 +117,16 @@ def handle_message():
             
     # except Exception as e:
     #     print(f"Error in handle_message: {e}")
+    #     return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal/chat', methods=['POST'])
+def handle_personal_message():
+    # try:
+    data = request.json
+    response = personal_message_service.handle_message(data)
+    return jsonify(response)
+    # except Exception as e:
+    #     print(f"Error in handle_personal_message: {e}")
     #     return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
