@@ -61,8 +61,7 @@ class PersonalMessageService:
                 source = {
                     "canvas_id": doc.metadata.get("canvas_id"),
                     "title": doc.metadata.get("title", "无标题"),
-                    "similarity_score": float(score),
-                    "content_preview": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+                    "similarity_score": float(score)
                 }
                 sources.append(source)
             
@@ -90,11 +89,8 @@ class PersonalMessageService:
         formatted = []
         for i, (doc, score) in enumerate(docs_with_scores):
             title = doc.metadata.get("title", "无标题")
-            canvas_id = doc.metadata.get("canvas_id", "未知")
             formatted.append(f"文档 {i+1} (相似度: {score:.2f}):")
             formatted.append(f"标题: {title}")
-            formatted.append(f"画布ID: {canvas_id}")
-            formatted.append(f"内容: {doc.page_content}")
             formatted.append("---")
             
         return "\n".join(formatted) 

@@ -20,7 +20,7 @@
                         <div v-if="message.type === 'assistant' && message.sources && message.sources.length > 0">
                             <div class="answer-text">{{ message.content }}</div>
                             <div class="sources-container">
-                                <div class="sources-title">检索到的内容：</div>
+                                <div class="sources-title">相关画布：</div>
                                 <div v-for="(source, sIndex) in message.sources" 
                                      :key="sIndex" 
                                      class="source-item">
@@ -28,7 +28,6 @@
                                         <span class="source-title">{{ source.title }}</span>
                                         <span class="source-score">相似度: {{ source.similarity_score.toFixed(2) }}</span>
                                     </div>
-                                    <div class="source-preview">{{ source.content_preview }}</div>
                                     <button class="view-btn" @click="viewCanvas(source.canvas_id)">查看画布</button>
                                 </div>
                             </div>
@@ -263,15 +262,6 @@ export default {
 .source-score {
     font-size: 12px;
     color: #666;
-}
-
-.source-preview {
-    font-size: 12px;
-    color: #333;
-    margin-bottom: 8px;
-    max-height: 60px;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .view-btn {

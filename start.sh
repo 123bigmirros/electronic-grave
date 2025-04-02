@@ -23,7 +23,7 @@ start_backend_search() {
   echo "启动后端搜索API服务..."
   
   export OPENAI_API_BASE="https://api.chatanywhere.tech/v1"
-  export OPENAI_API_KEY="sk-qUBlXTWHxVAYM8bnxxVkZ9Qx5AF3i721T8LugGe1lMTmcIee"
+  export OPENAI_API_KEY=""
   
   # 方法1：使用conda run (推荐)
   # cd code/backend/python && conda run -n grave python -m controller.search_api
